@@ -1,42 +1,83 @@
 import nodemailer from 'nodemailer';
 import env from './env.js';
+import dns from 'dns';
+import { promisify } from 'util';
+const lookup = promisify(dns.lookup);
 
-// ============================================================
-// 1. Configurar el transporter con OAuth2
-// ============================================================
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // SSL
-  auth: {
-    type: 'OAuth2',
-    user: env.EMAIL_USER,
-    clientId: env.GOOGLE_CLIENT_ID,
-    clientSecret: env.GOOGLE_CLIENT_SECRET,
-    refreshToken: env.GOOGLE_REFRESH_TOKEN,
-  },
-  // Timeouts para evitar bloqueos
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-});
+// Verificar que todas las variables de OAuth2 estén presentes
+const requiredOAuthVars = ['EMAIL_USER', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN'];
+const missing = requiredOAuthVars.filter(v => !env[v]);
+if (missing.length) {
+  console.error('❌ Faltan variables de entorno OAuth2:', missing.join(', '));
+  throw new Error(`Faltan variables de entorno OAuth2: ${missing.join(', ')}`);
+}
 
-// ============================================================
-// 2. Verificar la conexión al iniciar (opcional)
-// ============================================================
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Error al conectar con Gmail (OAuth2):', error.message);
-    console.error('Detalles:', error);
-  } else {
-    console.log('✅ Transporter de Gmail (OAuth2) listo para enviar correos');
+let transporter = null;
+
+// Función para obtener la IP de smtp.gmail.com (IPv4)
+const getSmtpHostIPv4 = async () => {
+  try {
+    const result = await lookup('smtp.gmail.com', { family: 4 });
+    return result.address;
+  } catch (error) {
+    console.error('❌ No se pudo resolver smtp.gmail.com a IPv4:', error.message);
+    return 'smtp.gmail.com'; // fallback al nombre
   }
-});
+};
 
-// ============================================================
-// 3. Función para enviar correo de verificación
-// ============================================================
+// Inicializar transporter con OAuth2 (usando IPv4)
+const createTransporter = async () => {
+  const host = await getSmtpHostIPv4();
+  console.log(`📧 Configurando transporter con host: ${host}`);
+
+  const transporter = nodemailer.createTransport({
+    host: host,
+    port: 587,  // Usar STARTTLS (puerto 587) en lugar de SSL directo (465), a veces funciona mejor en serverless
+    secure: false, // STARTTLS
+    auth: {
+      type: 'OAuth2',
+      user: env.EMAIL_USER,
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      refreshToken: env.GOOGLE_REFRESH_TOKEN,
+    },
+    requireTLS: true,
+    tls: {
+      rejectUnauthorized: true,
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+  });
+
+  // Verificar conexión
+  try {
+    await transporter.verify();
+    console.log('✅ Transporter de Gmail (OAuth2) listo para enviar correos');
+    return transporter;
+  } catch (error) {
+    console.error('❌ Error al verificar transporter con OAuth2:', error.message);
+    console.error('Detalles:', error);
+    throw error;
+  }
+};
+
+// Inicializar al primer uso (lazy)
+const getTransporter = async () => {
+  if (!transporter) {
+    transporter = await createTransporter();
+  }
+  return transporter;
+};
+
 export const enviarCorreoVerificacion = async (destinatario, codigo) => {
+  try {
+    const transporter = await getTransporter();
+  } catch (error) {
+    console.error('❌ No se pudo inicializar el transporter:', error.message);
+    throw new Error('No se pudo configurar el envío de correos. Verifica las variables de entorno OAuth2.');
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
       <h2 style="color: #d32f2f; text-align: center;">Verificación de cuenta</h2>
@@ -53,12 +94,7 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
   `;
 
   try {
-    const info = await transporter.sendMail({
-      from: `"Parrilladas" <${env.EMAIL_USER}>`,
-      to: destinatario,
-      subject: 'Código de verificación - Parrilladas',
-      html,
-    });
+    const info = await transporter.sendMail({ ... });
     console.log(`✅ Correo de verificación enviado a ${destinatario}`);
     return info;
   } catch (error) {
@@ -71,6 +107,7 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
     throw new Error('No se pudo enviar el correo de verificación. Revisa la configuración del email.');
   }
 };
+
 
 // ============================================================
 // 4. Función para enviar correo de recuperación de contraseña
