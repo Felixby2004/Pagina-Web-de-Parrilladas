@@ -1,16 +1,25 @@
 import cors from 'cors';
 
-// Configuración CORS personalizada
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? ['https://tudominio.com'] // añadir dominios de producción
-  : ['http://localhost:3000', 'http://localhost:5173']; // Vite por defecto
+// Variable de entorno para el frontend (URL permitida)
+// Ejemplo: FRONTEND_URL=https://misitio.com
+const frontendUrl = process.env.FRONTEND_URL;
+
+// Si no está definida, usamos valores por defecto para desarrollo
+const allowedOrigins = frontendUrl
+  ? [frontendUrl]
+  : ['http://localhost:3000', 'http://localhost:5173'];
 
 export const handleCors = cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Permitir peticiones sin origin (ej. Postman, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Verificar si el origin está en la lista de permitidos
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por CORS'));
+      callback(new Error(`No permitido por CORS: ${origin}`));
     }
   },
   credentials: true,
