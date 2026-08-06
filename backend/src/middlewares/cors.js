@@ -1,11 +1,16 @@
 import cors from 'cors';
 
 const frontendUrl = process.env.FRONTEND_URL;
+const frontendUrls = process.env.FRONTEND_URLS;
 
 // Si no está definida, usamos valores por defecto para desarrollo
-const allowedOrigins = frontendUrl
-  ? [frontendUrl]
-  : ['http://localhost:3000', 'http://localhost:5173'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://parrillasapp.onrender.com',
+  ...(frontendUrl ? [frontendUrl] : []),
+  ...(frontendUrls ? frontendUrls.split(',').map((origin) => origin.trim()).filter(Boolean) : []),
+];
 
 // Configuración CORS más permisiva para asegurar que funcione
 export const handleCors = cors({

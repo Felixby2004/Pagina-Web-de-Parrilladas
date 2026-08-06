@@ -5,14 +5,6 @@ import { promisify } from 'util';
 
 const lookup = promisify(dns.lookup);
 
-// Verificar que todas las variables de OAuth2 estén presentes
-const requiredOAuthVars = ['EMAIL_USER', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN'];
-const missing = requiredOAuthVars.filter(v => !env[v]);
-if (missing.length) {
-  console.error('❌ Faltan variables de entorno OAuth2:', missing.join(', '));
-  throw new Error(`Faltan variables de entorno OAuth2: ${missing.join(', ')}`);
-}
-
 let transporterInstance = null;
 
 // Función para obtener la IP de smtp.gmail.com (IPv4)
@@ -28,20 +20,31 @@ const getSmtpHostIPv4 = async () => {
 
 // Inicializar transporter con OAuth2 (usando IPv4)
 const createTransporter = async () => {
+  if (!env.EMAIL_USER || !env.EMAIL_PASS) {
+    console.warn('⚠️ Configuración de email incompleta. Se omite el envío de correos.');
+    return null;
+  }
+
   const host = await getSmtpHostIPv4();
-  console.log(`📧 Configurando transporter con host: ${host}`);
+  const useOAuth2 = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
+  console.log(`📧 Configurando transporter con host: ${host} (${useOAuth2 ? 'OAuth2' : 'app password'})`);
 
   const transporter = nodemailer.createTransport({
-    host: host,
-    port: 587,  // STARTTLS
+    host,
+    port: 587,
     secure: false,
-    auth: {
-      type: 'OAuth2',
-      user: env.EMAIL_USER,
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      refreshToken: env.GOOGLE_REFRESH_TOKEN,
-    },
+    auth: useOAuth2
+      ? {
+          type: 'OAuth2',
+          user: env.EMAIL_USER,
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          refreshToken: env.GOOGLE_REFRESH_TOKEN,
+        }
+      : {
+          user: env.EMAIL_USER,
+          pass: env.EMAIL_PASS,
+        },
     requireTLS: true,
     tls: {
       rejectUnauthorized: true,
@@ -59,7 +62,7 @@ const createTransporter = async () => {
   } catch (error) {
     console.error('❌ Error al verificar transporter con OAuth2:', error.message);
     console.error('Detalles:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -80,7 +83,11 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
     transporter = await getTransporter();
   } catch (error) {
     console.error('❌ No se pudo inicializar el transporter:', error.message);
-    throw new Error('No se pudo configurar el envío de correos. Verifica las variables de entorno OAuth2.');
+    return { skipped: true };
+  }
+
+  if (!transporter) {
+    return { skipped: true };
   }
 
   const html = `
@@ -114,7 +121,7 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
     if (error.response) {
       console.error('  - Respuesta del servidor:', error.response);
     }
-    throw new Error('No se pudo enviar el correo de verificación. Revisa la configuración del email.');
+    return { skipped: true, error: error.message };
   }
 };
 
@@ -127,7 +134,11 @@ export const enviarCorreoRecuperacion = async (destinatario, codigo) => {
     transporter = await getTransporter();
   } catch (error) {
     console.error('❌ No se pudo inicializar el transporter:', error.message);
-    throw new Error('No se pudo configurar el envío de correos. Verifica las variables de entorno OAuth2.');
+    return { skipped: true };
+  }
+
+  if (!transporter) {
+    return { skipped: true };
   }
 
   const html = `
@@ -161,6 +172,6 @@ export const enviarCorreoRecuperacion = async (destinatario, codigo) => {
     if (error.response) {
       console.error('  - Respuesta del servidor:', error.response);
     }
-    throw new Error('No se pudo enviar el correo de recuperación. Revisa la configuración del email.');
+    return { skipped: true, error: error.message };
   }
 };

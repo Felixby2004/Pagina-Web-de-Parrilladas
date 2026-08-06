@@ -19,22 +19,7 @@ const app = express();
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 app.use(helmet());
 app.use(handleCors);
-
-// ✅ Manejar explícitamente las peticiones OPTIONS (preflight)
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  const frontendUrl = process.env.FRONTEND_URL;
-  
-  if (origin && (origin === frontendUrl || ['http://localhost:3000', 'http://localhost:5173'].includes(origin))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.status(200).send();
-  } else {
-    res.status(403).send('CORS not allowed');
-  }
-});
+app.options('*', handleCors);
 
 // Rate limiting general
 const limiter = rateLimit({

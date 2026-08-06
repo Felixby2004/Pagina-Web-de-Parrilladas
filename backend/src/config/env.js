@@ -13,6 +13,9 @@ const envSchema = z.object({
   // Email
   EMAIL_USER: z.string().email(),
   EMAIL_PASS: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REFRESH_TOKEN: z.string().optional(),
   
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: z.string().min(1),
