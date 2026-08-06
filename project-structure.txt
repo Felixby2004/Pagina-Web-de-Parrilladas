@@ -1,0 +1,143 @@
+backend/
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.js
+├── src/
+│   ├── config/
+│   │   ├── env.js
+│   │   ├── db.js
+│   │   ├── cloudinary.js
+│   │   └── email.js
+│   ├── controllers/
+│   │   ├── auth.controller.js
+│   │   ├── usuario.controller.js
+│   │   ├── producto.controller.js
+│   │   ├── pedido.controller.js
+│   │   ├── nota.controller.js
+│   │   ├── reporte.controller.js
+│   │   ├── configuracion.controller.js
+│   ├── middlewares/
+│   │   ├── auth.middleware.js
+│   │   ├── errorHandler.js
+│   │   ├── validate.js
+│   │   ├── rateLimit.js
+│   │   ├── multer.js
+│   │   └── cors.js
+│   ├── repositories/
+│   │   ├── usuario.repository.js
+│   │   ├── producto.repository.js
+│   │   ├── pedido.repository.js
+│   │   ├── nota.repository.js
+│   │   ├── configuracion.repository.js
+│   ├── routes/
+│   │   ├── auth.routes.js
+│   │   ├── usuario.routes.js
+│   │   ├── producto.routes.js
+│   │   ├── pedido.routes.js
+│   │   ├── nota.routes.js
+│   │   ├── reporte.routes.js
+│   │   ├── configuracion.routes.js
+│   ├── services/
+│   │   ├── auth.service.js
+│   │   ├── usuario.service.js
+│   │   ├── producto.service.js
+│   │   ├── pedido.service.js
+│   │   ├── nota.service.js
+│   │   ├── reporte.service.js
+│   │   ├── configuracion.service.js
+│   ├── validators/
+│   │   ├── auth.validator.js
+│   │   ├── usuario.validator.js
+│   │   ├── producto.validator.js
+│   │   ├── pedido.validator.js
+│   │   ├── nota.validator.js
+│   │   ├── reporte.validator.js
+│   │   └── configuracion.validator.js
+│   ├── utils/
+│   │   ├── codigo.js
+│   │   ├── formateador.js
+│   │   └── constants.js
+│   ├── types/
+│   │   └── index.d.ts
+│   ├── app.js
+│   └── server.js
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+└── README.md
+
+
+
+frontend/
+├── src/
+│   ├── assets/
+│   │   └── images/
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Button.jsx
+│   │   │   ├── Input.jsx
+│   │   │   ├── Loading.jsx
+│   │   │   ├── Skeleton.jsx
+│   │   │   ├── Snackbar.jsx
+│   │   │   └── ConfirmDialog.jsx
+│   │   ├── layout/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   └── Layout.jsx
+│   │   └── dashboard/
+│   │       ├── KpiCard.jsx
+│   │       └── DashboardStats.jsx
+│   ├── hooks/
+│   │   ├── useAuth.js
+│   │   ├── useProductos.js
+│   │   ├── usePedidos.js
+│   │   ├── useConfiguracion.js
+│   │   └── useNotas.js
+│   ├── layouts/
+│   │   ├── AuthLayout.jsx
+│   │   └── MainLayout.jsx
+│   ├── pages/
+│   │   ├── auth/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Registro.jsx
+│   │   │   ├── Verificar.jsx
+│   │   │   ├── Recuperar.jsx
+│   │   │   └── CambiarPassword.jsx
+│   │   ├── dashboard/
+│   │   │   └── Dashboard.jsx
+│   │   ├── productos/
+│   │   │   ├── ProductosList.jsx
+│   │   │   ├── ProductoForm.jsx
+│   │   │   └── ProductoDetail.jsx
+│   │   ├── pedidos/
+│   │   │   ├── PedidosList.jsx
+│   │   │   ├── PedidoForm.jsx
+│   │   │   └── PedidoDetail.jsx
+│   │   ├── reportes/
+│   │   │   ├── ReporteDiario.jsx
+│   │   │   └── ReporteIngresos.jsx
+│   │   ├── configuracion/
+│   │   │   └── ConfiguracionNegocio.jsx
+│   │   └── perfil/
+│   │       └── Perfil.jsx
+│   ├── routes/
+│   │   ├── AppRoutes.jsx
+│   │   └── PrivateRoute.jsx
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── auth.service.js
+│   │   ├── producto.service.js
+│   │   ├── pedido.service.js
+│   │   ├── reporte.service.js
+│   │   └── configuracion.service.js
+│   ├── store/
+│   │   ├── authStore.js
+│   │   ├── uiStore.js
+│   │   └── pedidoStore.js
+│   ├── utils/
+│   │   ├── formateador.js
+│   │   ├── constants.js
+│   │   └── helpers.js
+│   ├── validators/
+│   │   └── index.js
+└── .env.example

@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==============================
+// ENUMS (primero, antes de usarlos)
+// ==============================
+
+enum Rol {
+  ADMIN
+  EMPLEADO
+}
+
+enum TipoProducto {
+  PLATO
+  TAPER
+  PAPA_FRITA
+}
+
+enum EstadoPedido {
+  ABIERTO
+  PAGADO
+  CANCELADO
+}
+
+enum TipoNota {
+  OBSERVACION
+  ADICIONAL
+}
+
+// ==============================
+// MODELOS
+// ==============================
+
+model Usuario {
+  id                      Int      @id @default(autoincrement())
+  nombre                  String   @db.VarChar(100)
+  correo                  String   @unique @db.VarChar(150)
+  contraseña              String   @db.VarChar(255)
+  rol                     Rol      @default(EMPLEADO)
+  verificado              Boolean  @default(false)
+  codigoVerificacion      String?  @unique @db.VarChar(10)
+  expiracionVerificacion  DateTime?
+  codigoRecuperacion      String?  @unique @db.VarChar(10)
+  expiracionRecuperacion  DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  pedidos                 Pedido[]
+
+  @@map("usuarios")
+}
+
+model Producto {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @db.VarChar(150)
+  descripcion String?      @db.Text
+  precio      Decimal      @db.Decimal(10,2)
+  tipo        TipoProducto @default(PLATO)
+  disponible  Boolean      @default(true)
+  visible     Boolean      @default(true)  // Eliminación lógica
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  detalles    DetallePedido[]
+
+  @@map("productos")
+}
+
+model Pedido {
+  id            Int          @id @default(autoincrement())
+  usuarioId     Int
+  nombreCliente String?      @db.VarChar(150)
+  fecha         DateTime     @default(now())
+  estado        EstadoPedido @default(ABIERTO)
+  total         Decimal      @db.Decimal(10,2)
+  visible       Boolean      @default(true)  // Eliminación lógica
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  usuario       Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  detalles      DetallePedido[]
+  notas         Nota[]
+
+  @@map("pedidos")
+}
+
+model DetallePedido {
+  id             Int      @id @default(autoincrement())
+  pedidoId       Int
+  productoId     Int
+  cantidad       Int      @default(1)
+  precioUnitario Decimal  @db.Decimal(10,2)
+  usaTaper       Boolean  @default(false)
+  usaPapaFrita   Boolean  @default(false)
+  subtotal       Decimal  @db.Decimal(10,2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto       Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+
+  @@map("detalles_pedido")
+}
+
+model Nota {
+  id          Int         @id @default(autoincrement())
+  pedidoId    Int
+  tipo        TipoNota    @default(OBSERVACION)
+  texto       String?     @db.Text
+  cantidad    Int?
+  descripcion String?     @db.VarChar(200)
+  precio      Decimal?    @db.Decimal(10,2)
+  subtotal    Decimal?    @db.Decimal(10,2)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  pedido      Pedido      @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("notas")
+}
+
+model Configuracion {
+  id            Int      @id @default(autoincrement())
+  nombreNegocio String   @db.VarChar(200)
+  logoUrl       String?  @db.VarChar(500)
+  listaProductosUrl String? @db.VarChar(500)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("configuracion")
+}

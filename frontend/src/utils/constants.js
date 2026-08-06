@@ -1,0 +1,16 @@
+export const TIPOS_PRODUCTO = {
+  PLATO: 'PLATO',
+  TAPER: 'TAPER',
+  PAPA_FRITA: 'PAPA_FRITA',
+};
+
+export const ESTADOS_PEDIDO = {
+  ABIERTO: 'ABIERTO',
+  PAGADO: 'PAGADO',
+  CANCELADO: 'CANCELADO',
+};
+
+export const TIPOS_NOTA = {
+  OBSERVACION: 'OBSERVACION',
+  ADICIONAL: 'ADICIONAL',
+};
