@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import env from './env.js';
 import dns from 'dns';
 import { promisify } from 'util';
+
 const lookup = promisify(dns.lookup);
 
 // Verificar que todas las variables de OAuth2 estén presentes
@@ -12,7 +13,7 @@ if (missing.length) {
   throw new Error(`Faltan variables de entorno OAuth2: ${missing.join(', ')}`);
 }
 
-let transporter = null;
+let transporterInstance = null;
 
 // Función para obtener la IP de smtp.gmail.com (IPv4)
 const getSmtpHostIPv4 = async () => {
@@ -32,8 +33,8 @@ const createTransporter = async () => {
 
   const transporter = nodemailer.createTransport({
     host: host,
-    port: 587,  // Usar STARTTLS (puerto 587) en lugar de SSL directo (465), a veces funciona mejor en serverless
-    secure: false, // STARTTLS
+    port: 587,  // STARTTLS
+    secure: false,
     auth: {
       type: 'OAuth2',
       user: env.EMAIL_USER,
@@ -62,17 +63,21 @@ const createTransporter = async () => {
   }
 };
 
-// Inicializar al primer uso (lazy)
+// Obtener la instancia del transporter (lazy initialization)
 const getTransporter = async () => {
-  if (!transporter) {
-    transporter = await createTransporter();
+  if (!transporterInstance) {
+    transporterInstance = await createTransporter();
   }
-  return transporter;
+  return transporterInstance;
 };
 
+// ============================================================
+// Función para enviar correo de verificación
+// ============================================================
 export const enviarCorreoVerificacion = async (destinatario, codigo) => {
+  let transporter;
   try {
-    const transporter = await getTransporter();
+    transporter = await getTransporter();
   } catch (error) {
     console.error('❌ No se pudo inicializar el transporter:', error.message);
     throw new Error('No se pudo configurar el envío de correos. Verifica las variables de entorno OAuth2.');
@@ -94,7 +99,12 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
   `;
 
   try {
-    const info = await transporter.sendMail({ ... });
+    const info = await transporter.sendMail({
+      from: `"Parrilladas" <${env.EMAIL_USER}>`,
+      to: destinatario,
+      subject: 'Código de verificación - Parrilladas',
+      html,
+    });
     console.log(`✅ Correo de verificación enviado a ${destinatario}`);
     return info;
   } catch (error) {
@@ -108,11 +118,18 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
   }
 };
 
-
 // ============================================================
-// 4. Función para enviar correo de recuperación de contraseña
+// Función para enviar correo de recuperación de contraseña
 // ============================================================
 export const enviarCorreoRecuperacion = async (destinatario, codigo) => {
+  let transporter;
+  try {
+    transporter = await getTransporter();
+  } catch (error) {
+    console.error('❌ No se pudo inicializar el transporter:', error.message);
+    throw new Error('No se pudo configurar el envío de correos. Verifica las variables de entorno OAuth2.');
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
       <h2 style="color: #d32f2f; text-align: center;">Recuperación de contraseña</h2>
