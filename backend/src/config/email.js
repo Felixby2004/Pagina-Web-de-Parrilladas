@@ -1,38 +1,22 @@
 import nodemailer from 'nodemailer';
 import env from './env.js';
-import dns from 'dns';
-import { promisify } from 'util';
-
-const lookup = promisify(dns.lookup);
 
 let transporterInstance = null;
 
-// Función para obtener la IP de smtp.gmail.com (IPv4)
-const getSmtpHostIPv4 = async () => {
-  try {
-    const result = await lookup('smtp.gmail.com', { family: 4 });
-    return result.address;
-  } catch (error) {
-    console.error('❌ No se pudo resolver smtp.gmail.com a IPv4:', error.message);
-    return 'smtp.gmail.com'; // fallback al nombre
-  }
-};
-
-// Inicializar transporter con OAuth2 (usando IPv4)
+// Inicializar transporter con Gmail SMTP usando el hostname real
 const createTransporter = async () => {
   if (!env.EMAIL_USER || !env.EMAIL_PASS) {
     console.warn('⚠️ Configuración de email incompleta. Se omite el envío de correos.');
     return null;
   }
 
-  const host = await getSmtpHostIPv4();
   const useOAuth2 = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
-  console.log(`📧 Configurando transporter con host: ${host} (${useOAuth2 ? 'OAuth2' : 'app password'})`);
+  console.log(`📧 Configurando transporter con host: smtp.gmail.com (${useOAuth2 ? 'OAuth2' : 'app password'})`);
 
   const transporter = nodemailer.createTransport({
-    host,
-    port: 587,
-    secure: false,
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: useOAuth2
       ? {
           type: 'OAuth2',
@@ -45,8 +29,8 @@ const createTransporter = async () => {
           user: env.EMAIL_USER,
           pass: env.EMAIL_PASS,
         },
-    requireTLS: true,
     tls: {
+      servername: 'smtp.gmail.com',
       rejectUnauthorized: true,
     },
     connectionTimeout: 30000,
