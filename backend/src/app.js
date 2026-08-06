@@ -16,7 +16,7 @@ import configuracionRoutes from './routes/configuracion.routes.js';
 const app = express();
 
 // Seguridad
-app.set('trust proxy', true);
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 app.use(helmet());
 app.use(handleCors);
 
