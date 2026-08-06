@@ -1,12 +1,21 @@
 import nodemailer from 'nodemailer';
 import env from './env.js';
 
-// Configuración del transporter
+// Configuración del transporter con resolución de IPv4
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // SSL (para puerto 465)
   auth: {
     user: env.EMAIL_USER,
     pass: env.EMAIL_PASS,
+  },
+  // 👇 Forzar el uso de IPv4
+  connectionTimeout: 10000, // 10 segundos
+  greetingTimeout: 10000,
+  // Esto fuerza que el socket use IPv4
+  socketOptions: {
+    family: 4, // 4 = IPv4, 6 = IPv6
   },
 });
 
@@ -27,15 +36,21 @@ export const enviarCorreoVerificacion = async (destinatario, codigo) => {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Parrilladas" <${env.EMAIL_USER}>`,
-    to: destinatario,
-    subject: 'Código de verificación - Parrilladas',
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"Parrilladas" <${env.EMAIL_USER}>`,
+      to: destinatario,
+      subject: 'Código de verificación - Parrilladas',
+      html,
+    });
+    console.log(`✅ Correo de verificación enviado a ${destinatario}`);
+  } catch (error) {
+    console.error('❌ Error al enviar correo:', error);
+    throw new Error('No se pudo enviar el correo de verificación. Revisa la configuración del email.');
+  }
 };
 
-// Función para enviar correo de recuperación de contraseña
+// Función para enviar correo de recuperación
 export const enviarCorreoRecuperacion = async (destinatario, codigo) => {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
@@ -52,10 +67,16 @@ export const enviarCorreoRecuperacion = async (destinatario, codigo) => {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Parrilladas" <${env.EMAIL_USER}>`,
-    to: destinatario,
-    subject: 'Recuperación de contraseña - Parrilladas',
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"Parrilladas" <${env.EMAIL_USER}>`,
+      to: destinatario,
+      subject: 'Recuperación de contraseña - Parrilladas',
+      html,
+    });
+    console.log(`✅ Correo de recuperación enviado a ${destinatario}`);
+  } catch (error) {
+    console.error('❌ Error al enviar correo:', error);
+    throw new Error('No se pudo enviar el correo de recuperación. Revisa la configuración del email.');
+  }
 };
