@@ -10,7 +10,9 @@ const createTransporter = async () => {
     return null;
   }
 
-  const useOAuth2 = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
+  const useOAuth2 = env.EMAIL_USE_OAUTH2 === 'true'
+    && Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REFRESH_TOKEN);
+
   console.log(`📧 Configurando transporter con host: smtp.gmail.com (${useOAuth2 ? 'OAuth2' : 'app password'})`);
 
   const transporter = nodemailer.createTransport({

@@ -13,6 +13,7 @@ const envSchema = z.object({
   // Email
   EMAIL_USER: z.string().email().optional(),
   EMAIL_PASS: z.string().min(1).optional(),
+  EMAIL_USE_OAUTH2: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
