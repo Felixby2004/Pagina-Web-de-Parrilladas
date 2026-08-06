@@ -19,7 +19,6 @@ const app = express();
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 app.use(helmet());
 app.use(handleCors);
-app.options('*', handleCors);
 
 // Rate limiting general
 const limiter = rateLimit({
