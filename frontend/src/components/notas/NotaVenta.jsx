@@ -51,7 +51,6 @@ export const NotaVenta = forwardRef(({ pedido, configuracion }, ref) => {
       {/* Datos del pedido */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <Box>
-          <Typography variant="body2"><strong>N° Pedido:</strong> #{pedido.id}</Typography>
           <Typography variant="body2"><strong>Cliente:</strong> {pedido.nombreCliente || 'Anónimo'}</Typography>
         </Box>
         <Box sx={{ textAlign: 'right' }}>

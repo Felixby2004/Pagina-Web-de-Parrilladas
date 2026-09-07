@@ -27,12 +27,30 @@ export const formatDateShort = (date) => {
 };
 
 export const getDateInTimeZoneISO = (date = new Date(), timeZone = 'America/Lima') => {
-  // Returns YYYY-MM-DD for the given timeZone
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split('-').map(Number);
+    const calendarDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+      calendarDate.getUTCFullYear() === year
+      && calendarDate.getUTCMonth() === month - 1
+      && calendarDate.getUTCDate() === day
+    ) {
+      return date;
+    }
+
+    return getDateInTimeZoneISO(new Date(), timeZone);
+  }
+
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return getDateInTimeZoneISO(new Date(), timeZone);
+  }
+
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(date);
-  return parts; // en-CA gives YYYY-MM-DD
+  }).format(parsedDate);
+  return parts;
 };
