@@ -54,9 +54,16 @@ const calcularTotalPedido = (detalles, notas) => {
   return totalDetalles + totalNotas;
 };
 
+const convertirFechaPedido = (fecha) => {
+  if (!fecha) return undefined;
+  const [year, month, day] = fecha.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 5, 0, 0, 0));
+};
+
 export const crearPedidoService = async (data, usuarioId) => {
-  const { nombreCliente, detalles, notas } = data;
+  const { nombreCliente, fecha, detalles, notas } = data;
   const notasArray = Array.isArray(notas) ? notas : [];
+  const fechaPedido = convertirFechaPedido(fecha) || new Date();
 
   // Calcular subtotales de cada detalle
   const detallesCalculados = await Promise.all(detalles.map(calcularSubtotalDetalle));
@@ -82,6 +89,7 @@ export const crearPedidoService = async (data, usuarioId) => {
   const pedido = await crearPedido({
     usuarioId,
     nombreCliente: nombreCliente || null,
+    fecha: fechaPedido,
     detalles: {
       create: detallesCalculados,
     },
@@ -130,7 +138,7 @@ export const actualizarPedidoService = async (id, data) => {
     throw { statusCode: 400, message: 'No se puede editar un pedido que ya está pagado o cancelado' };
   }
 
-  const { nombreCliente, detalles, notas } = data;
+  const { nombreCliente, fecha, detalles, notas } = data;
   const notasArray = Array.isArray(notas) ? notas : [];
 
   const detallesCalculados = await Promise.all(detalles.map(calcularSubtotalDetalle));
@@ -156,6 +164,7 @@ export const actualizarPedidoService = async (id, data) => {
 
   return actualizarPedido(id, {
     nombreCliente: nombreClienteActualizado ?? null,
+    ...(fecha && { fecha: convertirFechaPedido(fecha) }),
     estado: data.estado ?? pedidoExistente.estado,
     detalles: {
       deleteMany: {},

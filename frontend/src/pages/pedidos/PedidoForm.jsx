@@ -29,7 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 import { usePedidos } from '../../hooks/usePedidos';
 import { useProductos } from '../../hooks/useProductos';
 import { pedidoService } from '../../services/pedido.service';
-import { formatCurrency } from '../../utils/formateador';
+import { formatCurrency, getDateInTimeZoneISO } from '../../utils/formateador';
 import { z } from 'zod';
 
 const detalleSchema = z.object({
@@ -49,6 +49,7 @@ const notaSchema = z.object({
 
 const pedidoSchema = z.object({
   nombreCliente: z.string().optional(),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleccione una fecha'),
   estado: z.enum(['ABIERTO', 'PAGADO', 'CANCELADO']).default('ABIERTO'),
   detalles: z.array(detalleSchema).min(1, 'Agregue al menos un producto'),
   notas: z.array(notaSchema).optional(),
@@ -75,6 +76,7 @@ export default function PedidoForm() {
     resolver: zodResolver(pedidoSchema),
     defaultValues: {
       nombreCliente: '',
+      fecha: getDateInTimeZoneISO(),
       estado: 'ABIERTO',
       detalles: [{ productoId: '', cantidad: 1, usaTaper: false, usaPapaFrita: false }],
       notas: [],
@@ -108,6 +110,7 @@ export default function PedidoForm() {
 
     reset({
       nombreCliente: pedidoEdit.nombreCliente || '',
+      fecha: getDateInTimeZoneISO(pedidoEdit.fecha),
       estado: pedidoEdit.estado || 'ABIERTO',
       detalles: (pedidoEdit.detalles || []).map((d) => ({
         productoId: d.productoId,
@@ -169,6 +172,7 @@ export default function PedidoForm() {
 
       const pedidoData = {
         nombreCliente: data.nombreCliente || null,
+        fecha: data.fecha,
         estado: data.estado || 'ABIERTO',
         detalles: data.detalles.map(d => ({
           productoId: Number(d.productoId),
@@ -224,7 +228,7 @@ export default function PedidoForm() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Grid container spacing={3} sx={{ alignItems: 'center' }}>
-              <Grid item xs={12} md={isEdit ? 6 : 8}>
+              <Grid item xs={12} md={isEdit ? 5 : 6}>
                 <Controller
                   name="nombreCliente"
                   control={control}
@@ -234,6 +238,24 @@ export default function PedidoForm() {
                       label="Nombre del Cliente"
                       fullWidth
                       disabled={isLocked}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} md={isEdit ? 4 : 6}>
+                <Controller
+                  name="fecha"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Fecha del Pedido"
+                      type="date"
+                      fullWidth
+                      error={!!errors.fecha}
+                      helperText={errors.fecha?.message}
+                      disabled={isLocked}
+                      InputLabelProps={{ shrink: true }}
                     />
                   )}
                 />

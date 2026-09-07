@@ -75,7 +75,7 @@ model Pedido {
   id            Int          @id @default(autoincrement())
   usuarioId     Int
   nombreCliente String?      @db.VarChar(150)
-  fecha         DateTime     @default(now())
+  fecha         DateTime
   estado        EstadoPedido @default(ABIERTO)
   total         Decimal      @db.Decimal(10,2)
   visible       Boolean      @default(true)  // Eliminación lógica
