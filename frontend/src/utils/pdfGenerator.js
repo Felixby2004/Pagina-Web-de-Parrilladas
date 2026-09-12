@@ -28,11 +28,49 @@ export const generarPDF = async (element, nombreArchivo = 'nota_venta.pdf') => {
       logging: false,
       backgroundColor: '#ffffff',
     });
-    const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const pdfPageHeight = pdf.internal.pageSize.getHeight();
+    const canvasPageHeight = Math.floor((canvas.width * pdfPageHeight) / pdfWidth);
+    const scale = canvas.width / element.getBoundingClientRect().width;
+    const pedidoStarts = [...element.querySelectorAll('.pdf-pedido')]
+      .map((pedido) => Math.round((pedido.getBoundingClientRect().top - element.getBoundingClientRect().top) * scale))
+      .filter((top) => top > 0)
+      .sort((first, second) => first - second);
+    let canvasOffset = 0;
+
+    while (canvasOffset < canvas.height) {
+      const targetEnd = Math.min(canvasOffset + canvasPageHeight, canvas.height);
+      const safeEnd = pedidoStarts
+        .filter((top) => top > canvasOffset && top <= targetEnd)
+        .pop() || targetEnd;
+      const sliceHeight = safeEnd - canvasOffset;
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = sliceHeight;
+      pageCanvas.getContext('2d').drawImage(
+        canvas,
+        0,
+        canvasOffset,
+        canvas.width,
+        sliceHeight,
+        0,
+        0,
+        canvas.width,
+        sliceHeight
+      );
+
+      if (canvasOffset > 0) pdf.addPage();
+      pdf.addImage(
+        pageCanvas.toDataURL('image/png'),
+        'PNG',
+        0,
+        0,
+        pdfWidth,
+        (sliceHeight * pdfWidth) / canvas.width
+      );
+      canvasOffset = safeEnd;
+    }
     pdf.save(nombreArchivo);
   } catch (error) {
     console.error('Error al generar PDF:', error);
