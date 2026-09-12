@@ -55,7 +55,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         minHeight: '210mm',
         boxSizing: 'border-box',
 
-        p: '10mm 12mm',
+        p: '12mm 14mm',
 
         bgcolor: '#f8fafc',
         fontFamily: 'Arial, sans-serif',
@@ -63,7 +63,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
         '@page': {
           size: 'A4 landscape',
-          margin: '10mm 12mm',
+          margin: '12mm 14mm',
         },
 
         '@media print': {
@@ -79,11 +79,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * ========================================================
          * CONFIGURACIÓN DE PÁGINA
          * ========================================================
+         *
+         * Este margen se aplica automáticamente a TODAS las
+         * hojas que genere la impresión (no solo la primera),
+         * porque @page es una regla global del documento.
          */
 
         @page {
           size: A4 landscape;
-          margin: 10mm 12mm;
+          margin: 12mm 14mm;
         }
 
         /*
@@ -99,30 +103,31 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * 4. Hoja 2 - derecha
          * 5. ...
          *
-         * Se utiliza CSS MULTI-COLUMN.
+         * Esto lo logra el navegador de forma NATIVA cuando
+         * un contenedor multi-column no cabe en una sola hoja:
+         * sigue llenando columnas en las hojas siguientes.
+         *
+         * Para que esto funcione bien, el contenido de CADA
+         * pedido debe poder partirse en flujo normal de bloque
+         * (por eso el layout interno usa "float" y no "grid":
+         * ver más abajo el porqué).
          */
 
         .pdf-pedidos-container {
           column-count: 2;
-          column-gap: 5mm;
+          column-gap: 6mm;
           column-fill: auto;
 
-          /*
-           * ANTES:
-           *
-           * height: calc(190mm - 18mm);
-           *
-           * Eso dejaba demasiado espacio vacío abajo.
-           *
-           * AHORA:
-           *
-           * Aprovechamos más altura útil de la hoja.
-           */
-          height: calc(190mm - 10mm);
+          height: calc(186mm - 14mm);
 
           width: 100%;
 
           column-span: none;
+
+          /* Un pequeño respiro para que el contenido no
+             empiece pegado justo en el borde superior de
+             cada columna/página cuando continúa. */
+          padding-top: 1mm;
         }
 
         /*
@@ -130,48 +135,68 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * PEDIDO
          * ========================================================
          *
-         * Cada pedido conserva su estructura:
+         * Cliente/Notas a la izquierda, tabla a la derecha.
          *
-         * Cliente / Notas | Tabla
+         * IMPORTANTE — POR QUÉ "FLOAT" Y NO "GRID":
          *
-         * El pedido puede fragmentarse para respetar la
-         * continuidad entre columnas.
+         * CSS Grid NO fragmenta de forma confiable dentro de
+         * layouts multi-column al imprimir: en vez de partir
+         * el pedido donde corresponde, el motor de impresión
+         * tiende a empujarlo completo a la siguiente columna,
+         * dejando espacios en blanco.
+         *
+         * Con "float" el bloque de cliente queda flotando a la
+         * izquierda y la tabla ocupa el resto del ancho con
+         * "margin-left". Así la tabla queda en flujo normal de
+         * bloque, y son las FILAS de la tabla (que ya tienen
+         * break-inside: avoid) las que deciden el corte real:
+         *
+         *   columna izquierda (lo que entra)
+         *         ↓
+         *   columna derecha (el resto de las filas)
+         *         ↓
+         *   siguiente hoja, columna izquierda
+         *         ↓
+         *   ...
          */
 
         .pdf-pedido {
           width: 100%;
-          min-width: 0;
-
-          display: grid;
-
-          grid-template-columns:
-            minmax(31%, 0.8fr)
-            minmax(0, 2fr);
-
-          gap: 0.75rem;
-
-          align-items: start;
-
           box-sizing: border-box;
 
-          /*
-           * IMPORTANTE:
-           *
-           * No usar avoid-page aquí.
-           *
-           * Esto permite que el pedido continúe:
-           *
-           * columna izquierda
-           *       ↓
-           * columna derecha
-           *       ↓
-           * siguiente hoja
-           */
+          /* Contiene el float interno (evita que el margen
+             inferior colapse mal entre pedidos). */
+          display: flow-root;
 
           break-inside: auto;
           page-break-inside: auto;
 
           margin-bottom: 6mm;
+          padding: 1.5mm 2mm;
+        }
+
+        .pdf-cliente-info {
+          float: left;
+          width: 30%;
+          box-sizing: border-box;
+
+          /* El bloque de cliente + notas no se parte:
+             se queda completo con la primera parte del pedido. */
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .pdf-tabla-container {
+          margin-left: 33%;
+          min-width: 0;
+          width: auto;
+          overflow: visible;
+          box-sizing: border-box;
+
+          /* La tabla sí puede continuar en la siguiente
+             columna/hoja. */
+          break-inside: auto;
+          page-break-inside: auto;
         }
 
         /*
@@ -180,7 +205,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * ========================================================
          *
          * Se elimina únicamente el MARCO EXTERIOR de la tabla.
-         *
          * Las líneas internas de las celdas permanecen.
          */
 
@@ -188,39 +212,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           width: 100%;
           table-layout: fixed;
           border-collapse: collapse;
-
-          /*
-           * ELIMINADO:
-           *
-           * border: 2px solid #1e293b;
-           *
-           * Ya no habrá una línea gruesa alrededor de toda
-           * la tabla.
-           */
           border: none;
         }
 
         .pdf-tabla thead {
-          /*
-           * Si la tabla continúa en otra columna/página,
-           * el encabezado vuelve a aparecer.
-           */
+          /* Si la tabla continúa en otra columna/página,
+             el encabezado vuelve a aparecer. */
           display: table-header-group;
-        }
-
-        /*
-         * ========================================================
-         * CONTENEDOR DE TABLA
-         * ========================================================
-         */
-
-        .pdf-tabla-container {
-          min-width: 0;
-          width: 100%;
-          overflow: visible;
-
-          break-inside: auto;
-          page-break-inside: auto;
         }
 
         /*
@@ -229,7 +227,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * ========================================================
          *
          * Una fila completa no se parte.
-         *
          * Si no entra, pasa al siguiente espacio disponible.
          */
 
@@ -258,53 +255,44 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             padding: 0 !important;
           }
 
-          /*
-           * Mantener exactamente DOS columnas por hoja.
-           *
-           * La continuidad sigue siendo:
-           *
-           * izquierda → derecha → siguiente hoja izquierda
-           */
-
           .pdf-pedidos-container {
             column-count: 2 !important;
-            column-gap: 5mm !important;
+            column-gap: 6mm !important;
             column-fill: auto !important;
 
-            /*
-             * Aprovechamos también el espacio inferior
-             * durante impresión/PDF.
-             */
-            height: calc(190mm - 10mm) !important;
+            height: calc(186mm - 14mm) !important;
 
             width: 100% !important;
+
+            padding-top: 1mm !important;
           }
 
-          /*
-           * EL PEDIDO PUEDE CONTINUAR.
-           */
-
           .pdf-pedido {
+            display: flow-root !important;
+
             break-inside: auto !important;
             page-break-inside: auto !important;
 
             width: 100% !important;
 
             margin-bottom: 6mm !important;
+            padding: 1.5mm 2mm !important;
           }
 
-          /*
-           * La tabla también puede continuar.
-           */
+          .pdf-cliente-info {
+            float: left !important;
+            width: 30% !important;
+
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
 
           .pdf-tabla-container {
+            margin-left: 33% !important;
+
             break-inside: auto !important;
             page-break-inside: auto !important;
           }
-
-          /*
-           * Las filas permanecen completas.
-           */
 
           .pdf-tabla tr,
           .pdf-tabla td,
@@ -313,17 +301,9 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             page-break-inside: avoid !important;
           }
 
-          /*
-           * Repetir encabezado cuando una tabla continúa.
-           */
-
           .pdf-tabla thead {
             display: table-header-group !important;
           }
-
-          /*
-           * Evitar separar el título del contenido.
-           */
 
           .pdf-encabezado {
             break-after: avoid-page !important;
@@ -374,17 +354,14 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         className="pdf-pedidos-container"
         sx={{
           columnCount: 2,
-          columnGap: '5mm',
+          columnGap: '6mm',
           columnFill: 'auto',
 
-          /*
-           * Más altura disponible.
-           *
-           * Se mantiene la continuidad mediante CSS columns.
-           */
-          height: 'calc(190mm - 10mm)',
+          height: 'calc(186mm - 14mm)',
 
           width: '100%',
+
+          pt: '1mm',
         }}
       >
         {pedidos.map(
@@ -422,47 +399,31 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                 }
                 className="pdf-pedido"
                 sx={{
-                  display: 'grid',
-
-                  /*
-                   * IZQUIERDA:
-                   * cliente + observaciones
-                   *
-                   * DERECHA:
-                   * tabla
-                   */
-
-                  gridTemplateColumns:
-                    'minmax(31%, 0.8fr) minmax(0, 2fr)',
-
-                  gap: 0.75,
-
-                  alignItems: 'start',
-
-                  minWidth: 0,
-
                   width: '100%',
-
                   boxSizing: 'border-box',
 
-                  /*
-                   * IMPORTANTE:
-                   *
-                   * Permitimos que este pedido continúe
-                   * en la siguiente columna.
-                   */
+                  display: 'flow-root',
 
                   breakInside: 'auto',
                   pageBreakInside: 'auto',
+
+                  mb: '6mm',
+                  p: '1.5mm 2mm',
                 }}
               >
                 {/* =================================================
-                    CLIENTE + OBSERVACIONES
+                    CLIENTE + OBSERVACIONES (flota a la izquierda)
                     ================================================= */}
 
                 <Box
+                  className="pdf-cliente-info"
                   sx={{
-                    minWidth: 0,
+                    float: 'left',
+                    width: '30%',
+                    boxSizing: 'border-box',
+
+                    breakInside: 'avoid',
+                    pageBreakInside: 'avoid',
                   }}
                 >
                   <Typography
@@ -473,15 +434,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       width: '100%',
                       boxSizing: 'border-box',
 
-                      fontSize: '10pt',
-                      lineHeight: 1.15,
+                      fontSize: '11pt',
+                      lineHeight: 1.2,
 
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
 
                       bgcolor: '#fef3c7',
 
-                      py: 0.45,
+                      py: 0.5,
                       px: 0.75,
 
                       border: '2px solid #b45309',
@@ -500,12 +461,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                   {observaciones.length > 0 && (
                     <Box
                       sx={{
-                        mt: 0.4,
+                        mt: 0.5,
                       }}
                     >
                       <Typography
                         sx={{
-                          fontSize: '8pt',
+                          fontSize: '9pt',
                           fontWeight: 'bold',
                           color: '#111827',
                         }}
@@ -521,8 +482,8 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               notaIdx
                             }
                             sx={{
-                              fontSize: '8pt',
-                              lineHeight: 1.15,
+                              fontSize: '8.5pt',
+                              lineHeight: 1.2,
                               fontStyle: 'italic',
                               color: '#334155',
 
@@ -539,21 +500,18 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                 </Box>
 
                 {/* =================================================
-                    TABLA DEL PEDIDO
+                    TABLA DEL PEDIDO (a la derecha del cliente)
                     ================================================= */}
 
                 <TableContainer
                   className="pdf-tabla-container"
                   sx={{
-                    minWidth: 0,
+                    marginLeft: '33%',
 
-                    width: '100%',
+                    minWidth: 0,
+                    width: 'auto',
 
                     overflow: 'visible',
-
-                    /*
-                     * La tabla puede continuar.
-                     */
 
                     breakInside: 'auto',
                     pageBreakInside: 'auto',
@@ -570,12 +528,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       borderCollapse:
                         'collapse',
 
-                      /*
-                       * SIN MARCO EXTERIOR.
-                       *
-                       * Las celdas siguen teniendo sus
-                       * propios bordes internos.
-                       */
                       border: 'none',
                     }}
                   >
@@ -595,13 +547,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                           sx={{
                             width: '17%',
 
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             fontWeight: 'bold',
 
                             border:
                               '1px solid #1e293b',
 
-                            py: 0.35,
+                            py: 0.4,
                             px: 0.5,
 
                             color: '#ffffff',
@@ -619,13 +571,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 ? '47%'
                                 : '58%',
 
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             fontWeight: 'bold',
 
                             border:
                               '1px solid #1e293b',
 
-                            py: 0.35,
+                            py: 0.4,
                             px: 0.5,
 
                             color: '#ffffff',
@@ -644,13 +596,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 ? '18%'
                                 : '25%',
 
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             fontWeight: 'bold',
 
                             border:
                               '1px solid #1e293b',
 
-                            py: 0.35,
+                            py: 0.4,
                             px: 0.5,
 
                             color: '#ffffff',
@@ -667,13 +619,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             sx={{
                               width: '18%',
 
-                              fontSize: '8pt',
+                              fontSize: '9pt',
                               fontWeight: 'bold',
 
                               border:
                                 '1px solid #1e293b',
 
-                              py: 0.35,
+                              py: 0.4,
                               px: 0.5,
 
                               color: '#ffffff',
@@ -708,13 +660,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                     '#dbeafe',
                                 },
 
-                              /*
-                               * UNA FILA NO SE PARTE.
-                               *
-                               * Si no entra completa en el
-                               * espacio actual, pasa al siguiente.
-                               */
-
                               breakInside:
                                 'avoid',
                               pageBreakInside:
@@ -725,12 +670,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                             <TableCell
                               sx={{
-                                fontSize: '8pt',
+                                fontSize: '9pt',
 
                                 border:
                                   '1px solid #475569',
 
-                                py: 0.25,
+                                py: 0.3,
                                 px: 0.5,
                               }}
                             >
@@ -741,12 +686,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                             <TableCell
                               sx={{
-                                fontSize: '8pt',
+                                fontSize: '9pt',
 
                                 border:
                                   '1px solid #475569',
 
-                                py: 0.25,
+                                py: 0.3,
                                 px: 0.5,
 
                                 overflowWrap:
@@ -763,12 +708,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             <TableCell
                               align="center"
                               sx={{
-                                fontSize: '8pt',
+                                fontSize: '9pt',
 
                                 border:
                                   '1px solid #475569',
 
-                                py: 0.25,
+                                py: 0.3,
                                 px: 0.5,
 
                                 fontWeight:
@@ -793,12 +738,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               <TableCell
                                 align="center"
                                 sx={{
-                                  fontSize: '8pt',
+                                  fontSize: '9pt',
 
                                   border:
                                     '1px solid #475569',
 
-                                  py: 0.25,
+                                  py: 0.3,
                                   px: 0.5,
 
                                   fontWeight:
@@ -848,11 +793,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                       '#fed7aa',
                                   },
 
-                                /*
-                                 * Una nota adicional
-                                 * tampoco se parte.
-                                 */
-
                                 breakInside:
                                   'avoid',
                                 pageBreakInside:
@@ -863,12 +803,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                               <TableCell
                                 sx={{
-                                  fontSize: '8pt',
+                                  fontSize: '9pt',
 
                                   border:
                                     '1px solid #475569',
 
-                                  py: 0.25,
+                                  py: 0.3,
                                   px: 0.5,
                                 }}
                               >
@@ -879,12 +819,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                               <TableCell
                                 sx={{
-                                  fontSize: '8pt',
+                                  fontSize: '9pt',
 
                                   border:
                                     '1px solid #475569',
 
-                                  py: 0.25,
+                                  py: 0.3,
                                   px: 0.5,
 
                                   fontStyle:
@@ -903,12 +843,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               <TableCell
                                 align="center"
                                 sx={{
-                                  fontSize: '8pt',
+                                  fontSize: '9pt',
 
                                   border:
                                     '1px solid #475569',
 
-                                  py: 0.25,
+                                  py: 0.3,
                                   px: 0.5,
 
                                   color:
@@ -925,12 +865,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                   align="center"
                                   sx={{
                                     fontSize:
-                                      '8pt',
+                                      '9pt',
 
                                     border:
                                       '1px solid #475569',
 
-                                    py: 0.25,
+                                    py: 0.3,
                                     px: 0.5,
 
                                     color:
