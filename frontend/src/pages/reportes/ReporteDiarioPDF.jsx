@@ -64,8 +64,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gridTemplateRows: `repeat(${pedidosPorColumna}, minmax(0, auto))`,
             gridAutoFlow: 'column',
-            gap: 1.25,
-            mb: 1.25,
+            columnGap: 1,
+            rowGap: 0.5,
+            mb: 0.5,
           }}
         >
           {pagina.map(({ cliente, pedidosCliente, pedido }, pIdx) => {
@@ -81,10 +82,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: 'minmax(30%, 0.75fr) minmax(0, 2fr)',
-                  gap: 0.75,
+                  gap: 0.5,
                   alignItems: 'start',
                   minWidth: 0,
-                  minHeight: '28mm',
+                  minHeight: '27mm',
                   pageBreakInside: 'avoid',
                   breakInside: 'avoid',
                 }}
@@ -99,7 +100,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                       width: '100%',
                       minHeight: '9mm',
                       boxSizing: 'border-box',
-                      fontSize: '9pt',
+                      fontSize: '10pt',
                       lineHeight: 1.1,
                       overflowWrap: 'anywhere',
                       bgcolor: '#fef3c7',
@@ -114,13 +115,13 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                   </Typography>
                   {observaciones.length > 0 && (
                     <Box sx={{ mt: 0.25 }}>
-                      <Typography sx={{ fontSize: '7pt', fontWeight: 'bold', color: '#111827' }}>
+                      <Typography sx={{ fontSize: '8pt', fontWeight: 'bold', color: '#111827' }}>
                         Notas:
                       </Typography>
                       {observaciones.map((nota, notaIdx) => (
                         <Typography
                           key={notaIdx}
-                          sx={{ fontSize: '7pt', lineHeight: 1.15, fontStyle: 'italic', color: '#334155' }}
+                          sx={{ fontSize: '8pt', lineHeight: 1.15, fontStyle: 'italic', color: '#334155' }}
                         >
                           • {nota.texto}
                         </Typography>
@@ -135,10 +136,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                       <TableRow sx={{ bgcolor: '#0f172a' }}>
                         <TableCell
                           sx={{
-                            fontSize: '7pt',
+                            fontSize: '8pt',
                             fontWeight: 'bold',
                             border: '1px solid #1e293b',
-                            py: 0.25,
+                            py: 0.35,
                             px: 0.5,
                             color: '#ffffff',
                           }}
@@ -147,10 +148,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                         </TableCell>
                         <TableCell
                           sx={{
-                            fontSize: '7pt',
+                            fontSize: '8pt',
                             fontWeight: 'bold',
                             border: '1px solid #1e293b',
-                            py: 0.25,
+                            py: 0.35,
                             px: 0.5,
                             color: '#ffffff',
                           }}
@@ -160,10 +161,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                         <TableCell
                           align="center"
                           sx={{
-                            fontSize: '7pt',
+                            fontSize: '8pt',
                             fontWeight: 'bold',
                             border: '1px solid #1e293b',
-                            py: 0.25,
+                            py: 0.35,
                             px: 0.5,
                             color: '#ffffff',
                           }}
@@ -173,10 +174,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                         {mostrarPapaFrita && <TableCell
                           align="center"
                           sx={{
-                            fontSize: '7pt',
+                            fontSize: '8pt',
                             fontWeight: 'bold',
                             border: '1px solid #1e293b',
-                            py: 0.25,
+                            py: 0.35,
                             px: 0.5,
                             color: '#ffffff',
                           }}
@@ -195,9 +196,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                         >
                           <TableCell
                             sx={{
-                              fontSize: '7pt',
+                              fontSize: '8pt',
                               border: '1px solid #475569',
-                              py: 0.15,
+                              py: 0.25,
                               px: 0.5,
                             }}
                           >
@@ -205,9 +206,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           </TableCell>
                           <TableCell
                             sx={{
-                              fontSize: '7pt',
+                              fontSize: '8pt',
                               border: '1px solid #475569',
-                              py: 0.15,
+                              py: 0.25,
                               px: 0.5,
                             }}
                           >
@@ -216,9 +217,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           <TableCell
                             align="center"
                             sx={{
-                              fontSize: '7pt',
+                              fontSize: '8pt',
                               border: '1px solid #475569',
-                              py: 0.15,
+                              py: 0.25,
                               px: 0.5,
                               fontWeight: detalle.usaTaper ? 'bold' : 'normal',
                               color: detalle.usaTaper ? '#15803d' : '#334155',
@@ -229,9 +230,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           {mostrarPapaFrita && <TableCell
                             align="center"
                             sx={{
-                              fontSize: '7pt',
+                              fontSize: '8pt',
                               border: '1px solid #475569',
-                              py: 0.15,
+                              py: 0.25,
                               px: 0.5,
                               fontWeight: detalle.usaPapaFrita ? 'bold' : 'normal',
                               color: detalle.usaPapaFrita ? '#15803d' : '#334155',
@@ -253,9 +254,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           >
                             <TableCell
                               sx={{
-                                fontSize: '7pt',
+                                fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.15,
+                                py: 0.25,
                                 px: 0.5,
                               }}
                             >
@@ -263,9 +264,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             </TableCell>
                             <TableCell
                               sx={{
-                                fontSize: '7pt',
+                                fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.15,
+                                py: 0.25,
                                 px: 0.5,
                                 fontStyle: 'italic',
                               }}
@@ -275,9 +276,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             <TableCell
                               align="center"
                               sx={{
-                                fontSize: '7pt',
+                                fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.15,
+                                py: 0.25,
                                 px: 0.5,
                                 color: '#334155',
                               }}
@@ -287,9 +288,9 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             {mostrarPapaFrita && <TableCell
                               align="center"
                               sx={{
-                                fontSize: '7pt',
+                                fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.15,
+                                py: 0.25,
                                 px: 0.5,
                                 color: '#334155',
                               }}

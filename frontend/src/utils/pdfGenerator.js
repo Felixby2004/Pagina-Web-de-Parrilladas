@@ -37,13 +37,15 @@ export const generarPDF = async (element, nombreArchivo = 'nota_venta.pdf') => {
       .map((page) => Math.round((page.getBoundingClientRect().top - element.getBoundingClientRect().top) * scale))
       .filter((top) => top > 0)
       .sort((first, second) => first - second);
+    const pageEnds = pageStarts.slice(1);
     let canvasOffset = 0;
 
     while (canvasOffset < canvas.height) {
       const targetEnd = Math.min(canvasOffset + canvasPageHeight, canvas.height);
-      const safeEnd = pageStarts
+      const nextPageEnd = pageEnds
         .filter((top) => top > canvasOffset && top <= targetEnd)
         .pop() || targetEnd;
+      const safeEnd = nextPageEnd > canvasOffset ? nextPageEnd : targetEnd;
       const sliceHeight = safeEnd - canvasOffset;
       const pageCanvas = document.createElement('canvas');
       pageCanvas.width = canvas.width;
