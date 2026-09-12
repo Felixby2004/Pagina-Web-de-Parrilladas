@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 // Generar imagen a partir de un elemento HTML
-export const generarImagen = async (element, nombreArchivo = 'nota_venta.png') => {
+export const generarImagen = async (element, _nombreArchivo = 'nota_venta.png') => {
   if (!element) return null;
   try {
     const canvas = await html2canvas(element, {
@@ -33,15 +33,15 @@ export const generarPDF = async (element, nombreArchivo = 'nota_venta.pdf') => {
     const pdfPageHeight = pdf.internal.pageSize.getHeight();
     const canvasPageHeight = Math.floor((canvas.width * pdfPageHeight) / pdfWidth);
     const scale = canvas.width / element.getBoundingClientRect().width;
-    const pedidoStarts = [...element.querySelectorAll('.pdf-pedido')]
-      .map((pedido) => Math.round((pedido.getBoundingClientRect().top - element.getBoundingClientRect().top) * scale))
+    const pageStarts = [...element.querySelectorAll('.pdf-page')]
+      .map((page) => Math.round((page.getBoundingClientRect().top - element.getBoundingClientRect().top) * scale))
       .filter((top) => top > 0)
       .sort((first, second) => first - second);
     let canvasOffset = 0;
 
     while (canvasOffset < canvas.height) {
       const targetEnd = Math.min(canvasOffset + canvasPageHeight, canvas.height);
-      const safeEnd = pedidoStarts
+      const safeEnd = pageStarts
         .filter((top) => top > canvasOffset && top <= targetEnd)
         .pop() || targetEnd;
       const sliceHeight = safeEnd - canvasOffset;

@@ -12,6 +12,20 @@ import {
 } from '@mui/material';
 
 export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
+  const pedidos = data.flatMap((cliente) =>
+    cliente.pedidos.map((pedido) => ({
+      cliente: cliente.cliente,
+      pedidosCliente: cliente.pedidos,
+      pedido,
+    }))
+  );
+  const pedidosPorColumna = 6;
+  const pedidosPorPagina = pedidosPorColumna * 2;
+  const paginas = Array.from(
+    { length: Math.ceil(pedidos.length / pedidosPorPagina) },
+    (_, paginaIdx) => pedidos.slice(paginaIdx * pedidosPorPagina, (paginaIdx + 1) * pedidosPorPagina)
+  );
+
   return (
     <Box
       ref={ref}
@@ -19,7 +33,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
         width: '297mm',
         minHeight: '210mm',
         p: '5mm 6mm',
-        bgcolor: '#ffffff',
+        bgcolor: '#f8fafc',
         fontFamily: 'Arial, sans-serif',
       }}
     >
@@ -30,7 +44,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
         fontWeight="bold"
         sx={{
           fontSize: '16pt',
-          color: '#1a1a1a',
+          color: '#0f172a',
           letterSpacing: 0.5,
           mb: 1,
         }}
@@ -38,21 +52,25 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
         Lista de Pedidos
       </Typography>
 
-      <Divider sx={{ mb: 1.5, borderColor: '#ddd' }} />
+      <Divider sx={{ mb: 1.5, borderColor: '#475569' }} />
 
-      {data.map((cliente, idx) => (
+      {paginas.map((pagina, paginaIdx) => (
         <Box
-          key={idx}
+          key={paginaIdx}
+          className="pdf-page"
           sx={{
+            minHeight: '185mm',
             display: 'grid',
             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gridTemplateRows: `repeat(${pedidosPorColumna}, minmax(0, auto))`,
+            gridAutoFlow: 'column',
             gap: 1.25,
             mb: 1.25,
           }}
         >
-          {cliente.pedidos.map((pedido, pIdx) => {
+          {pagina.map(({ cliente, pedidosCliente, pedido }, pIdx) => {
             const observaciones = (pedido.notas || []).filter((nota) => nota.tipo === 'OBSERVACION');
-            const mostrarPapaFrita = cliente.pedidos.some((item) =>
+            const mostrarPapaFrita = pedidosCliente.some((item) =>
               (item.detalles || []).some((detalle) => detalle.usaPapaFrita)
             );
 
@@ -66,6 +84,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                   gap: 0.75,
                   alignItems: 'start',
                   minWidth: 0,
+                  minHeight: '28mm',
                   pageBreakInside: 'avoid',
                   breakInside: 'avoid',
                 }}
@@ -77,25 +96,31 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                     sx={{
                       display: 'inline-block',
                       maxWidth: '100%',
-                      fontSize: '10pt',
-                      bgcolor: '#fff3e0',
+                      width: '100%',
+                      minHeight: '9mm',
+                      boxSizing: 'border-box',
+                      fontSize: '9pt',
+                      lineHeight: 1.1,
+                      overflowWrap: 'anywhere',
+                      bgcolor: '#fef3c7',
                       py: 0.25,
                       px: 0.75,
-                      borderRadius: '3px',
-                      color: '#7a3b00',
+                      border: '2px solid #b45309',
+                      borderRadius: '2px',
+                      color: '#111827',
                     }}
                   >
                     {cliente.cliente}
                   </Typography>
                   {observaciones.length > 0 && (
                     <Box sx={{ mt: 0.25 }}>
-                      <Typography sx={{ fontSize: '7pt', fontWeight: 'bold', color: '#2c3e50' }}>
+                      <Typography sx={{ fontSize: '7pt', fontWeight: 'bold', color: '#111827' }}>
                         Notas:
                       </Typography>
                       {observaciones.map((nota, notaIdx) => (
                         <Typography
                           key={notaIdx}
-                          sx={{ fontSize: '7pt', lineHeight: 1.15, fontStyle: 'italic', color: 'text.secondary' }}
+                          sx={{ fontSize: '7pt', lineHeight: 1.15, fontStyle: 'italic', color: '#334155' }}
                         >
                           • {nota.texto}
                         </Typography>
@@ -105,17 +130,17 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                 </Box>
 
                 <TableContainer sx={{ minWidth: 0 }}>
-                  <Table size="small" sx={{ borderCollapse: 'collapse' }}>
+                  <Table size="small" sx={{ borderCollapse: 'collapse', border: '2px solid #1e293b' }}>
                     <TableHead>
-                      <TableRow sx={{ bgcolor: '#e3f2fd' }}>
+                      <TableRow sx={{ bgcolor: '#0f172a' }}>
                         <TableCell
                           sx={{
                             fontSize: '7pt',
                             fontWeight: 'bold',
-                            border: 'none',
+                            border: '1px solid #1e293b',
                             py: 0.25,
                             px: 0.5,
-                            color: '#495057',
+                            color: '#ffffff',
                           }}
                         >
                           Cantidad
@@ -124,10 +149,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           sx={{
                             fontSize: '7pt',
                             fontWeight: 'bold',
-                            border: 'none',
+                            border: '1px solid #1e293b',
                             py: 0.25,
                             px: 0.5,
-                            color: '#495057',
+                            color: '#ffffff',
                           }}
                         >
                           Producto
@@ -137,10 +162,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           sx={{
                             fontSize: '7pt',
                             fontWeight: 'bold',
-                            border: 'none',
+                            border: '1px solid #1e293b',
                             py: 0.25,
                             px: 0.5,
-                            color: '#495057',
+                            color: '#ffffff',
                           }}
                         >
                           Taper
@@ -150,10 +175,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           sx={{
                             fontSize: '7pt',
                             fontWeight: 'bold',
-                            border: 'none',
+                            border: '1px solid #1e293b',
                             py: 0.25,
                             px: 0.5,
-                            color: '#495057',
+                            color: '#ffffff',
                           }}
                         >
                           Papa Frita
@@ -165,13 +190,13 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                         <TableRow
                           key={`d-${dIdx}`}
                           sx={{
-                            '&:nth-of-type(even)': { bgcolor: '#f1f8e9' },
+                            '&:nth-of-type(even)': { bgcolor: '#dbeafe' },
                           }}
                         >
                           <TableCell
                             sx={{
                               fontSize: '7pt',
-                              border: 'none',
+                              border: '1px solid #475569',
                               py: 0.15,
                               px: 0.5,
                             }}
@@ -181,7 +206,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           <TableCell
                             sx={{
                               fontSize: '7pt',
-                              border: 'none',
+                              border: '1px solid #475569',
                               py: 0.15,
                               px: 0.5,
                             }}
@@ -192,11 +217,11 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             align="center"
                             sx={{
                               fontSize: '7pt',
-                              border: 'none',
+                              border: '1px solid #475569',
                               py: 0.15,
                               px: 0.5,
                               fontWeight: detalle.usaTaper ? 'bold' : 'normal',
-                              color: detalle.usaTaper ? '#2e7d32' : '#aaa',
+                              color: detalle.usaTaper ? '#15803d' : '#334155',
                             }}
                           >
                             {detalle.usaTaper ? '✔' : '—'}
@@ -205,11 +230,11 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             align="center"
                             sx={{
                               fontSize: '7pt',
-                              border: 'none',
+                              border: '1px solid #475569',
                               py: 0.15,
                               px: 0.5,
                               fontWeight: detalle.usaPapaFrita ? 'bold' : 'normal',
-                              color: detalle.usaPapaFrita ? '#2e7d32' : '#aaa',
+                              color: detalle.usaPapaFrita ? '#15803d' : '#334155',
                             }}
                           >
                             {detalle.usaPapaFrita ? '✔' : '—'}
@@ -222,14 +247,14 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                           <TableRow
                             key={`n-${nIdx}`}
                             sx={{
-                              bgcolor: '#fff8e1',
-                              '&:nth-of-type(even)': { bgcolor: '#fff3d6' },
+                              bgcolor: '#ffedd5',
+                              '&:nth-of-type(even)': { bgcolor: '#fed7aa' },
                             }}
                           >
                             <TableCell
                               sx={{
                                 fontSize: '7pt',
-                                border: 'none',
+                                border: '1px solid #475569',
                                 py: 0.15,
                                 px: 0.5,
                               }}
@@ -239,7 +264,7 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                             <TableCell
                               sx={{
                                 fontSize: '7pt',
-                                border: 'none',
+                                border: '1px solid #475569',
                                 py: 0.15,
                                 px: 0.5,
                                 fontStyle: 'italic',
@@ -251,10 +276,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                               align="center"
                               sx={{
                                 fontSize: '7pt',
-                                border: 'none',
+                                border: '1px solid #475569',
                                 py: 0.15,
                                 px: 0.5,
-                                color: '#aaa',
+                                color: '#334155',
                               }}
                             >
                               —
@@ -263,10 +288,10 @@ export const ReporteDiarioPDF = forwardRef(({ data }, ref) => {
                               align="center"
                               sx={{
                                 fontSize: '7pt',
-                                border: 'none',
+                                border: '1px solid #475569',
                                 py: 0.15,
                                 px: 0.5,
-                                color: '#aaa',
+                                color: '#334155',
                               }}
                             >
                               —
