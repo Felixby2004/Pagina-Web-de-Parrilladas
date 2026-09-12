@@ -21,7 +21,8 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
    *
    * IMPORTANTE:
    * No agrupamos los pedidos en filas horizontales.
-   * El CSS de columnas se encargará de llevarlos:
+   *
+   * El CSS MULTI-COLUMN se encarga de llevarlos:
    *
    * Hoja 1 izquierda
    *        ↓
@@ -32,7 +33,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
    * Hoja 2 derecha
    *        ↓
    * ...
+   *
+   * Primero se llena verticalmente una columna y luego
+   * continúa automáticamente en la siguiente.
    */
+
   const pedidos = data.flatMap((cliente) =>
     (cliente.pedidos || []).map((pedido) => ({
       clienteNombre: cliente.cliente || 'Cliente sin nombre',
@@ -86,22 +91,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * CONTENEDOR PRINCIPAL DE PEDIDOS
          * ========================================================
          *
-         * AQUÍ está la parte importante.
+         * CONTINUIDAD:
          *
-         * Usamos CSS MULTI-COLUMN en lugar de CSS GRID.
+         * 1. Hoja 1 - izquierda
+         * 2. Hoja 1 - derecha
+         * 3. Hoja 2 - izquierda
+         * 4. Hoja 2 - derecha
+         * 5. ...
          *
-         * El contenido se llena:
-         *
-         *   1. arriba -> abajo, columna izquierda
-         *   2. arriba -> abajo, columna derecha
-         *   3. siguiente página, columna izquierda
-         *   4. siguiente página, columna derecha
-         *
-         * Además:
-         * column-fill: auto
-         *
-         * hace que cada columna se llene verticalmente antes
-         * de continuar con la siguiente.
+         * Se utiliza CSS MULTI-COLUMN.
          */
 
         .pdf-pedidos-container {
@@ -110,22 +108,20 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           column-fill: auto;
 
           /*
-           * Altura útil aproximada de una A4 horizontal.
+           * ANTES:
            *
-           * 210mm de alto
-           * - 20mm de márgenes
-           * = 190mm
+           * height: calc(190mm - 18mm);
            *
-           * El encabezado ocupa una parte de esa altura.
+           * Eso dejaba demasiado espacio vacío abajo.
+           *
+           * AHORA:
+           *
+           * Aprovechamos más altura útil de la hoja.
            */
-          height: calc(190mm - 18mm);
+          height: calc(190mm - 10mm);
 
           width: 100%;
 
-          /*
-           * Evita que el navegador cree un espacio vertical
-           * artificial entre los pedidos.
-           */
           column-span: none;
         }
 
@@ -134,30 +130,20 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * PEDIDO
          * ========================================================
          *
-         * IMPORTANTE:
+         * Cada pedido conserva su estructura:
          *
-         * NO usamos:
+         * Cliente / Notas | Tabla
          *
-         *   break-inside: avoid-page
-         *
-         * porque eso impediría que una tabla continúe en la
-         * siguiente columna.
-         *
-         * Permitimos que el pedido se FRAGMENTE.
+         * El pedido puede fragmentarse para respetar la
+         * continuidad entre columnas.
          */
 
         .pdf-pedido {
           width: 100%;
           min-width: 0;
 
-          /*
-           * Cada pedido debe comenzar como un bloque.
-           */
           display: grid;
 
-          /*
-           * Cliente/Notas       Tabla
-           */
           grid-template-columns:
             minmax(31%, 0.8fr)
             minmax(0, 2fr);
@@ -169,14 +155,22 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           box-sizing: border-box;
 
           /*
-           * Permitir fragmentación entre columnas/páginas.
+           * IMPORTANTE:
+           *
+           * No usar avoid-page aquí.
+           *
+           * Esto permite que el pedido continúe:
+           *
+           * columna izquierda
+           *       ↓
+           * columna derecha
+           *       ↓
+           * siguiente hoja
            */
+
           break-inside: auto;
           page-break-inside: auto;
 
-          /*
-           * Separación visual entre pedidos.
-           */
           margin-bottom: 3mm;
         }
 
@@ -185,29 +179,41 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
          * TABLA
          * ========================================================
          *
-         * La tabla también puede continuar en otra columna.
+         * Se elimina únicamente el MARCO EXTERIOR de la tabla.
+         *
+         * Las líneas internas de las celdas permanecen.
          */
 
         .pdf-tabla {
           width: 100%;
           table-layout: fixed;
           border-collapse: collapse;
-          border: 2px solid #1e293b;
+
+          /*
+           * ELIMINADO:
+           *
+           * border: 2px solid #1e293b;
+           *
+           * Ya no habrá una línea gruesa alrededor de toda
+           * la tabla.
+           */
+          border: none;
         }
 
         .pdf-tabla thead {
           /*
            * Si la tabla continúa en otra columna/página,
-           * el encabezado se vuelve a mostrar.
+           * el encabezado vuelve a aparecer.
            */
           display: table-header-group;
         }
 
         /*
-         * IMPORTANTE:
-         *
-         * No impedir que la tabla completa se fragmente.
+         * ========================================================
+         * CONTENEDOR DE TABLA
+         * ========================================================
          */
+
         .pdf-tabla-container {
           min-width: 0;
           width: 100%;
@@ -218,18 +224,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         }
 
         /*
-         * Una fila sí debe permanecer completa.
+         * ========================================================
+         * FILAS
+         * ========================================================
          *
-         * De esta manera no tendremos algo como:
+         * Una fila completa no se parte.
          *
-         * "Chuletas..."
-         *     ↓
-         * cambio de columna
-         *     ↓
-         * "...especiales"
-         *
-         * La fila completa pasa al siguiente espacio.
+         * Si no entra, pasa al siguiente espacio disponible.
          */
+
         .pdf-tabla tr {
           break-inside: avoid;
           page-break-inside: avoid;
@@ -256,23 +259,31 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           }
 
           /*
-           * Mantener las dos columnas por hoja.
+           * Mantener exactamente DOS columnas por hoja.
+           *
+           * La continuidad sigue siendo:
+           *
+           * izquierda → derecha → siguiente hoja izquierda
            */
+
           .pdf-pedidos-container {
             column-count: 2 !important;
             column-gap: 5mm !important;
             column-fill: auto !important;
 
-            height: calc(190mm - 18mm) !important;
+            /*
+             * Aprovechamos también el espacio inferior
+             * durante impresión/PDF.
+             */
+            height: calc(190mm - 10mm) !important;
 
             width: 100% !important;
           }
 
           /*
            * EL PEDIDO PUEDE CONTINUAR.
-           *
-           * No usar avoid-page aquí.
            */
+
           .pdf-pedido {
             break-inside: auto !important;
             page-break-inside: auto !important;
@@ -283,16 +294,18 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           }
 
           /*
-           * La tabla puede continuar.
+           * La tabla también puede continuar.
            */
+
           .pdf-tabla-container {
             break-inside: auto !important;
             page-break-inside: auto !important;
           }
 
           /*
-           * Pero las filas permanecen completas.
+           * Las filas permanecen completas.
            */
+
           .pdf-tabla tr,
           .pdf-tabla td,
           .pdf-tabla th {
@@ -301,17 +314,17 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           }
 
           /*
-           * Repetir encabezado de tabla cuando la tabla
-           * continúa.
+           * Repetir encabezado cuando una tabla continúa.
            */
+
           .pdf-tabla thead {
             display: table-header-group !important;
           }
 
           /*
-           * Evitar que el título principal quede separado
-           * innecesariamente.
+           * Evitar separar el título del contenido.
            */
+
           .pdf-encabezado {
             break-after: avoid-page !important;
             page-break-after: avoid !important;
@@ -364,7 +377,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           columnGap: '5mm',
           columnFill: 'auto',
 
-          height: 'calc(190mm - 18mm)',
+          /*
+           * Más altura disponible.
+           *
+           * Se mantiene la continuidad mediante CSS columns.
+           */
+          height: 'calc(190mm - 10mm)',
 
           width: '100%',
         }}
@@ -413,6 +431,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                    * DERECHA:
                    * tabla
                    */
+
                   gridTemplateColumns:
                     'minmax(31%, 0.8fr) minmax(0, 2fr)',
 
@@ -432,6 +451,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                    * Permitimos que este pedido continúe
                    * en la siguiente columna.
                    */
+
                   breakInside: 'auto',
                   pageBreakInside: 'auto',
                 }}
@@ -534,6 +554,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     /*
                      * La tabla puede continuar.
                      */
+
                     breakInside: 'auto',
                     pageBreakInside: 'auto',
                   }}
@@ -549,8 +570,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       borderCollapse:
                         'collapse',
 
-                      border:
-                        '2px solid #1e293b',
+                      /*
+                       * SIN MARCO EXTERIOR.
+                       *
+                       * Las celdas siguen teniendo sus
+                       * propios bordes internos.
+                       */
+                      border: 'none',
                     }}
                   >
                     {/* =============================================
@@ -688,6 +714,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                * Si no entra completa en el
                                * espacio actual, pasa al siguiente.
                                */
+
                               breakInside:
                                 'avoid',
                               pageBreakInside:
@@ -825,6 +852,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                  * Una nota adicional
                                  * tampoco se parte.
                                  */
+
                                 breakInside:
                                   'avoid',
                                 pageBreakInside:
@@ -927,5 +955,4 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
   );
 });
 
-ReporteDiarioPDF.displayName =
-  'ReporteDiarioPDF';
+ReporteDiarioPDF.displayName ='ReporteDiarioPDF';
