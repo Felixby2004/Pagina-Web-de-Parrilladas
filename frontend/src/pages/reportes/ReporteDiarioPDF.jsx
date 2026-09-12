@@ -55,7 +55,14 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         minHeight: '210mm',
         boxSizing: 'border-box',
 
-        p: '12mm 14mm',
+        p: '8mm 10mm',
+
+        // Contiene el contenido dentro del ancho de la hoja en
+        // pantalla. Si no, cuando el contenedor de pedidos no
+        // cabe en la altura fijada, el navegador agrega columnas
+        // extra hacia la derecha en vez de esperar a la hoja 2
+        // (eso se ve como una "3ra columna" fantasma).
+        overflow: 'hidden',
 
         bgcolor: '#f8fafc',
         fontFamily: 'Arial, sans-serif',
@@ -63,7 +70,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
         '@page': {
           size: 'A4 landscape',
-          margin: '12mm 14mm',
+          margin: '8mm 10mm',
         },
 
         '@media print': {
@@ -71,6 +78,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           minHeight: 'auto',
           p: 0,
           bgcolor: '#ffffff',
+          // En impresión SÍ debe poder desbordar hacia hoja 2, 3...
+          // (el motor de impresión pagina el desborde real, no lo
+          // recorta como hace "overflow: hidden" en pantalla).
+          overflow: 'visible',
         },
       }}
     >
@@ -87,7 +98,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
         @page {
           size: A4 landscape;
-          margin: 12mm 14mm;
+          margin: 8mm 10mm;
         }
 
         /*
@@ -118,7 +129,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           column-gap: 6mm;
           column-fill: auto;
 
-          height: calc(186mm - 14mm);
+          height: 180mm;
 
           width: 100%;
 
@@ -128,6 +139,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
              empiece pegado justo en el borde superior de
              cada columna/página cuando continúa. */
           padding-top: 1mm;
+
+          /* En pantalla: recorta cualquier desborde para que
+             nunca se vea una "3ra columna" fantasma saliéndose
+             de la hoja. En impresión (más abajo) se libera para
+             que el desborde real pagine a la hoja 2, 3... */
+          overflow: hidden;
         }
 
         /*
@@ -253,6 +270,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             width: auto !important;
             min-height: auto !important;
             padding: 0 !important;
+            overflow: visible !important;
           }
 
           .pdf-pedidos-container {
@@ -260,11 +278,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             column-gap: 6mm !important;
             column-fill: auto !important;
 
-            height: calc(186mm - 14mm) !important;
+            height: 180mm !important;
 
             width: 100% !important;
 
             padding-top: 1mm !important;
+
+            /* Aquí sí debe desbordar: el motor de impresión
+               convierte ese desborde en hoja 2, hoja 3... */
+            overflow: visible !important;
           }
 
           .pdf-pedido {
@@ -357,11 +379,17 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           columnGap: '6mm',
           columnFill: 'auto',
 
-          height: 'calc(186mm - 14mm)',
+          height: '180mm',
 
           width: '100%',
 
           pt: '1mm',
+
+          overflow: 'hidden',
+
+          '@media print': {
+            overflow: 'visible',
+          },
         }}
       >
         {pedidos.map(
