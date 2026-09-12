@@ -50,28 +50,34 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           margin: 10mm 12mm;
         }
 
-        /* CONTENEDOR DE IMPRESIÓN SÓLIDO (Sin Grid / Sin Flexbox para evitar fallos de salto de página) */
-        .pdf-container-block {
-          width: 100%;
-          box-sizing: border-box;
+        /* CONTENEDOR DE MULTI-COLUMNA REAL */
+        .pdf-columns-wrapper {
+          column-count: 2 !important;
+          column-gap: 8mm !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
         }
 
-        /* CADA TARJETA ES UN BLOQUE INLINE AL 49% DE ANCHO */
+        /* TARJETA DE PEDIDO 100% INDIVISIBLE */
         .pdf-pedido-card {
-          display: inline-block !important;
-          vertical-align: top !important;
-          width: 49.5% !important;
+          display: block !important;
+          width: 100% !important;
           box-sizing: border-box !important;
-          margin-bottom: 5mm !important;
-          padding-right: 2mm !important;
-          
-          /* REGLAS CRÍTICAS PARA QUE EL NAVEGADOR JAMÁS CORTE ESTA CAJA */
+          margin-bottom: 4mm !important;
+
+          /* Evita estrictamente que la tarjeta se rompa entre columnas o páginas */
           break-inside: avoid !important;
           page-break-inside: avoid !important;
           -webkit-column-break-inside: avoid !important;
         }
 
-        /* SEPARACIÓN INTERNA DE LA TARJETA USANDO TABLA TRADICIONAL DE ESTRUCTURA */
+        /* PREVENTIVO PARA FILAS DE TABLA */
+        .pdf-tabla tr {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+
+        /* ESTRUCTURA INTERNA CLIENTE - TABLA */
         .pdf-card-layout {
           display: table;
           width: 100%;
@@ -102,8 +108,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             padding: 0 !important;
           }
 
+          .pdf-columns-wrapper {
+            column-count: 2 !important;
+            column-gap: 8mm !important;
+          }
+
           .pdf-pedido-card {
-            display: inline-block !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
@@ -142,8 +152,8 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         <Divider sx={{ borderColor: '#475569' }} />
       </Box>
 
-      {/* CONTENEDOR PRINCIPAL */}
-      <div className="pdf-container-block">
+      {/* CONTENEDOR EN 2 COLUMNAS CONTINUAS */}
+      <div className="pdf-columns-wrapper">
         {pedidos.map(({ clienteNombre, pedidosCliente, pedido }, pIdx) => {
           const observaciones = (pedido.notas || []).filter(
             (nota) => nota.tipo === 'OBSERVACION'
@@ -154,7 +164,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           );
 
           return (
-            /* TARJETA INDIVISIBLE (inline-block + break-inside: avoid) */
+            /* TARJETA COMPLETA PROTEGIDA CONTRA PARTIDAS */
             <div
               key={pedido.id ?? `${clienteNombre}-${pIdx}`}
               className="pdf-pedido-card"
@@ -214,7 +224,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                   )}
                 </div>
 
-                {/* LADO DERECHO: TABLA */}
+                {/* LADO DERECHO: TABLA DEL PEDIDO */}
                 <div className="pdf-card-main">
                   <TableContainer sx={{ width: '100%' }}>
                     <Table className="pdf-tabla" size="small">
