@@ -171,7 +171,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           break-inside: auto;
           page-break-inside: auto;
 
-          margin-bottom: 3mm;
+          margin-bottom: 5mm;
         }
 
         /*
@@ -290,7 +290,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
             width: 100% !important;
 
-            margin-bottom: 3mm !important;
+            margin-bottom: 5mm !important;
           }
 
           /*
