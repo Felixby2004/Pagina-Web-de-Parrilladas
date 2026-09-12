@@ -198,7 +198,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           variant="h5"
           fontWeight="bold"
           sx={{
-            fontSize: '16pt',
+            fontSize: '18pt',
             color: '#0f172a',
             letterSpacing: 0.5,
             mb: 1,
@@ -222,13 +222,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         }}
       >
         {pedidos.map(({ clienteNombre, pedidosCliente, pedido }, pIdx) => {
-          const observaciones = (pedido.notas || []).filter(
-            (nota) => nota.tipo === 'OBSERVACION'
-          );
-
-          const adicionales = (pedido.notas || []).filter(
-            (nota) => nota.tipo === 'ADICIONAL'
-          );
+          const notas = pedido.notas || [];
 
           const mostrarPapaFrita = pedidosCliente.some((item) =>
             (item.detalles || []).some((detalle) => detalle.usaPapaFrita)
@@ -250,7 +244,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                 pageBreakInside: 'auto',
               }}
             >
-              {/* IZQUIERDA: CLIENTE Y OBSERVACIONES */}
+              {/* IZQUIERDA: CLIENTE Y NOTAS (INCLUYE OBSERVACIONES Y ADICIONALES ORIGINALES) */}
               <Box sx={{ minWidth: 0 }}>
                 <Typography
                   variant="subtitle1"
@@ -259,13 +253,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     display: 'block',
                     width: '100%',
                     boxSizing: 'border-box',
-                    fontSize: '10pt',
-                    lineHeight: 1.15,
+                    fontSize: '11pt',
+                    lineHeight: 1.2,
                     overflowWrap: 'anywhere',
                     wordBreak: 'break-word',
                     bgcolor: '#fef3c7',
-                    py: 0.45,
-                    px: 0.75,
+                    py: 0.5,
+                    px: 0.8,
                     border: '2px solid #b45309',
                     borderRadius: '2px',
                     color: '#111827',
@@ -274,11 +268,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                   {clienteNombre}
                 </Typography>
 
-                {observaciones.length > 0 && (
-                  <Box sx={{ mt: 0.4 }}>
+                {notas.length > 0 && (
+                  <Box sx={{ mt: 0.5 }}>
                     <Typography
                       sx={{
-                        fontSize: '8pt',
+                        fontSize: '9.5pt',
                         fontWeight: 'bold',
                         color: '#111827',
                       }}
@@ -286,25 +280,25 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       Notas:
                     </Typography>
 
-                    {observaciones.map((nota, notaIdx) => (
+                    {notas.map((nota, notaIdx) => (
                       <Typography
                         key={nota.id ?? notaIdx}
                         sx={{
-                          fontSize: '8pt',
-                          lineHeight: 1.15,
+                          fontSize: '9pt',
+                          lineHeight: 1.2,
                           fontStyle: 'italic',
                           color: '#334155',
                           overflowWrap: 'anywhere',
                         }}
                       >
-                        • {nota.texto}
+                        • {nota.texto || nota.descripcion || nota}
                       </Typography>
                     ))}
                   </Box>
                 )}
               </Box>
 
-              {/* DERECHA: TABLA DE DETALLES Y ADICIONALES */}
+              {/* DERECHA: TABLA DE DETALLES */}
               <TableContainer
                 className="pdf-tabla-container"
                 sx={{
@@ -329,12 +323,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     <TableRow sx={{ bgcolor: '#0f172a' }}>
                       <TableCell
                         sx={{
-                          width: '17%',
-                          fontSize: '8pt',
+                          width: '18%',
+                          fontSize: '9pt',
                           fontWeight: 'bold',
                           border: '1px solid #1e293b',
-                          py: 0.35,
-                          px: 0.5,
+                          py: 0.4,
+                          px: 0.6,
                           color: '#ffffff',
                         }}
                       >
@@ -343,12 +337,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                       <TableCell
                         sx={{
-                          width: mostrarPapaFrita ? '47%' : '58%',
-                          fontSize: '8pt',
+                          width: mostrarPapaFrita ? '46%' : '57%',
+                          fontSize: '9pt',
                           fontWeight: 'bold',
                           border: '1px solid #1e293b',
-                          py: 0.35,
-                          px: 0.5,
+                          py: 0.4,
+                          px: 0.6,
                           color: '#ffffff',
                         }}
                       >
@@ -359,11 +353,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         align="center"
                         sx={{
                           width: mostrarPapaFrita ? '18%' : '25%',
-                          fontSize: '8pt',
+                          fontSize: '9pt',
                           fontWeight: 'bold',
                           border: '1px solid #1e293b',
-                          py: 0.35,
-                          px: 0.5,
+                          py: 0.4,
+                          px: 0.6,
                           color: '#ffffff',
                         }}
                       >
@@ -375,11 +369,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                           align="center"
                           sx={{
                             width: '18%',
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             fontWeight: 'bold',
                             border: '1px solid #1e293b',
-                            py: 0.35,
-                            px: 0.5,
+                            py: 0.4,
+                            px: 0.6,
                             color: '#ffffff',
                           }}
                         >
@@ -390,7 +384,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                   </TableHead>
 
                   <TableBody>
-                    {/* PRODUCTOS DETALLE */}
                     {(pedido.detalles || []).map((detalle, dIdx) => (
                       <TableRow
                         key={detalle.id ?? `d-${dIdx}`}
@@ -404,10 +397,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       >
                         <TableCell
                           sx={{
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             border: '1px solid #475569',
-                            py: 0.25,
-                            px: 0.5,
+                            py: 0.35,
+                            px: 0.6,
                           }}
                         >
                           {detalle.cantidad}
@@ -415,10 +408,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
                         <TableCell
                           sx={{
-                            fontSize: '8pt',
+                            fontSize: '9pt',
                             border: '1px solid #475569',
-                            py: 0.25,
-                            px: 0.5,
+                            py: 0.35,
+                            px: 0.6,
                             overflowWrap: 'anywhere',
                           }}
                         >
@@ -428,10 +421,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         <TableCell
                           align="center"
                           sx={{
-                            fontSize: '8pt',
+                            fontSize: '9.5pt',
                             border: '1px solid #475569',
-                            py: 0.25,
-                            px: 0.5,
+                            py: 0.35,
+                            px: 0.6,
                             fontWeight: detalle.usaTaper ? 'bold' : 'normal',
                             color: detalle.usaTaper ? '#15803d' : '#334155',
                           }}
@@ -443,10 +436,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                           <TableCell
                             align="center"
                             sx={{
-                              fontSize: '8pt',
+                              fontSize: '9.5pt',
                               border: '1px solid #475569',
-                              py: 0.25,
-                              px: 0.5,
+                              py: 0.35,
+                              px: 0.6,
                               fontWeight: detalle.usaPapaFrita
                                 ? 'bold'
                                 : 'normal',
@@ -458,36 +451,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             {detalle.usaPapaFrita ? '✔' : '—'}
                           </TableCell>
                         )}
-                      </TableRow>
-                    ))}
-
-                    {/* NOTAS ADICIONALES */}
-                    {adicionales.map((nota, nIdx) => (
-                      <TableRow
-                        key={nota.id ?? `n-${nIdx}`}
-                        sx={{
-                          bgcolor: '#ffedd5',
-                          '&:nth-of-type(even)': {
-                            bgcolor: '#fed7aa',
-                          },
-                          breakInside: 'avoid',
-                          pageBreakInside: 'avoid',
-                        }}
-                      >
-                        <TableCell
-                          colSpan={mostrarPapaFrita ? 4 : 3}
-                          sx={{
-                            fontSize: '8pt',
-                            fontStyle: 'italic',
-                            color: '#9a3412',
-                            border: '1px solid #ea580c',
-                            py: 0.25,
-                            px: 0.5,
-                            overflowWrap: 'anywhere',
-                          }}
-                        >
-                          <strong>Adicional:</strong> {nota.texto}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
