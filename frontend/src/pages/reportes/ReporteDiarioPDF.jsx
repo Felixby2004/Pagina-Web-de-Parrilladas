@@ -26,22 +26,18 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
       className="reporte-pdf"
       sx={{
         width: '100%',
-        maxWidth: '273mm', // A4 Landscape (297mm) menos márgenes seguros (12mm x 2)
-        margin: '0 auto',
         boxSizing: 'border-box',
-        p: '8mm 10mm',
         bgcolor: '#ffffff',
         fontFamily: 'Arial, sans-serif',
         color: '#0f172a',
 
         '@page': {
           size: 'A4 landscape',
-          margin: '12mm 14mm', // Margen real de la hoja para que el impresor/navegador no corte los bordes
+          margin: '10mm 12mm', // Margen exacto para la impresora/PDF
         },
 
         '@media print': {
           width: '100% !important',
-          maxWidth: 'none !important',
           p: '0 !important',
           bgcolor: '#ffffff',
         },
@@ -50,56 +46,55 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
       <style>{`
         @page {
           size: A4 landscape;
-          margin: 12mm 14mm;
+          margin: 10mm 12mm;
         }
 
-        /* CONTENEDOR DE MULTI-COLUMNA CON ESPACIADO SEGURO */
+        /* CONFIGURACIÓN DE MULTI-COLUMNA CON FLUJO CONTINUO VERTICAL */
         .pdf-columns-wrapper {
           column-count: 2 !important;
-          column-gap: 10mm !important;
+          column-gap: 12mm !important;
+          column-fill: auto !important; /* Fuerza a llenar 1ro columna izq, luego columna der */
           width: 100% !important;
           box-sizing: border-box !important;
         }
 
-        /* TARJETA INDIVISIBLE (BLANCO COMPLETO Y MARGEN INFERIOR DE PROTECCIÓN) */
+        /* TARJETA INDIVISIBLE QUE SALTA LIMPIAMENTE DE COLUMNA Y PÁGINA */
         .pdf-pedido-card {
-          display: inline-block !important; /* inline-block fuerza a Chromium a no romper bloques en multi-column */
+          display: block !important;
           width: 100% !important;
           box-sizing: border-box !important;
-          margin-bottom: 6mm !important;
-          padding-top: 1mm !important;
-          padding-bottom: 1mm !important;
+          margin-bottom: 5mm !important;
 
-          /* Reglas estrictas de salto de página */
+          /* REGLAS OBLIGATORIAS DE NO-ROPTURA PARA NAVEGADORES */
           break-inside: avoid !important;
           page-break-inside: avoid !important;
           -webkit-column-break-inside: avoid !important;
-          break-inside: avoid-page !important;
         }
 
-        /* ESTRUCTURA FIJA INTERNA (NOMBRE Y NOTAS // TABLA) */
-        .pdf-card-layout {
-          display: table;
-          width: 100%;
-          table-layout: fixed;
+        /* FLEXBOX SIMPLE DE 2 COLUMNAS INTERNAS (NOMBRE | TABLA) */
+        .pdf-card-flex {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: flex-start !important;
+          gap: 8px !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
         }
 
         .pdf-card-sidebar {
-          display: table-cell;
-          width: 110px;
-          vertical-align: top;
-          padding-right: 8px;
+          width: 105px !important;
+          flex-shrink: 0 !important;
         }
 
         .pdf-card-main {
-          display: table-cell;
-          vertical-align: top;
+          flex-grow: 1 !important;
+          min-width: 0 !important;
         }
 
         .pdf-tabla {
-          width: 100%;
-          table-layout: fixed;
-          border-collapse: collapse;
+          width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
         }
 
         .pdf-tabla tr {
@@ -108,6 +103,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         }
 
         @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
           .reporte-pdf {
             width: 100% !important;
             padding: 0 !important;
@@ -115,11 +115,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
           .pdf-columns-wrapper {
             column-count: 2 !important;
-            column-gap: 10mm !important;
+            column-gap: 12mm !important;
+            column-fill: auto !important;
           }
 
           .pdf-pedido-card {
-            display: inline-block !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             -webkit-column-break-inside: avoid !important;
@@ -136,7 +136,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
       <Box
         className="pdf-encabezado"
         sx={{
-          mb: 2,
+          mb: 1.5,
           breakAfter: 'avoid',
           pageBreakAfter: 'avoid',
         }}
@@ -146,10 +146,10 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           variant="h5"
           fontWeight="bold"
           sx={{
-            fontSize: '17pt',
+            fontSize: '16pt',
             color: '#0f172a',
             letterSpacing: 0.5,
-            mb: 1,
+            mb: 0.8,
           }}
         >
           Lista de Pedidos
@@ -158,7 +158,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         <Divider sx={{ borderColor: '#475569', borderWidth: '1px' }} />
       </Box>
 
-      {/* CONTENEDOR EN 2 COLUMNAS CONTINUAS */}
+      {/* CONTENEDOR PRINCIPAL MULTI-COLUMNA */}
       <div className="pdf-columns-wrapper">
         {pedidos.map(({ clienteNombre, pedidosCliente, pedido }, pIdx) => {
           const observaciones = (pedido.notas || []).filter(
@@ -170,13 +170,13 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           );
 
           return (
-            /* TARJETA TOTALMENTE PROTEGIDA DE CORTES HORIZONTALES */
+            /* CADA TARJETA ES INDIVISIBLE Y SE ACOMODA EN EL FLUJO NATIVO */
             <div
               key={pedido.id ?? `${clienteNombre}-${pIdx}`}
               className="pdf-pedido-card"
             >
-              <div className="pdf-card-layout">
-                {/* LADO IZQUIERDO: NOMBRE Y NOTAS */}
+              <div className="pdf-card-flex">
+                {/* COLUMNA IZQUIERDA DE LA TARJETA: NOMBRE CLIENTE Y NOTAS */}
                 <div className="pdf-card-sidebar">
                   <Typography
                     variant="subtitle1"
@@ -185,12 +185,12 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       display: 'block',
                       width: '100%',
                       boxSizing: 'border-box',
-                      fontSize: '9.5pt',
+                      fontSize: '9pt',
                       lineHeight: 1.2,
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
                       bgcolor: '#fef3c7',
-                      py: 0.5,
+                      py: 0.4,
                       px: 0.5,
                       border: '2px solid #b45309',
                       borderRadius: '2px',
@@ -230,9 +230,9 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                   )}
                 </div>
 
-                {/* LADO DERECHO: TABLA DEL PEDIDO */}
+                {/* COLUMNA DERECHA DE LA TARJETA: TABLA DEL PEDIDO */}
                 <div className="pdf-card-main">
-                  <TableContainer sx={{ width: '100%' }}>
+                  <TableContainer sx={{ width: '100%', overflow: 'hidden' }}>
                     <Table className="pdf-tabla" size="small">
                       <TableHead>
                         <TableRow sx={{ bgcolor: '#0f172a' }}>
@@ -242,7 +242,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               fontSize: '8pt',
                               fontWeight: 'bold',
                               border: '1px solid #1e293b',
-                              py: 0.3,
+                              py: 0.25,
                               px: 0.4,
                               color: '#ffffff',
                             }}
@@ -256,7 +256,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               fontSize: '8pt',
                               fontWeight: 'bold',
                               border: '1px solid #1e293b',
-                              py: 0.3,
+                              py: 0.25,
                               px: 0.4,
                               color: '#ffffff',
                             }}
@@ -271,7 +271,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               fontSize: '8pt',
                               fontWeight: 'bold',
                               border: '1px solid #1e293b',
-                              py: 0.3,
+                              py: 0.25,
                               px: 0.4,
                               color: '#ffffff',
                             }}
@@ -287,7 +287,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 fontSize: '8pt',
                                 fontWeight: 'bold',
                                 border: '1px solid #1e293b',
-                                py: 0.3,
+                                py: 0.25,
                                 px: 0.4,
                                 color: '#ffffff',
                               }}
@@ -312,7 +312,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               sx={{
                                 fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.3,
+                                py: 0.25,
                                 px: 0.4,
                               }}
                             >
@@ -323,7 +323,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               sx={{
                                 fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.3,
+                                py: 0.25,
                                 px: 0.4,
                                 overflowWrap: 'anywhere',
                               }}
@@ -337,7 +337,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               sx={{
                                 fontSize: '8pt',
                                 border: '1px solid #475569',
-                                py: 0.3,
+                                py: 0.25,
                                 px: 0.4,
                                 fontWeight: detalle.usaTaper
                                   ? 'bold'
@@ -356,7 +356,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 sx={{
                                   fontSize: '8pt',
                                   border: '1px solid #475569',
-                                  py: 0.3,
+                                  py: 0.25,
                                   px: 0.4,
                                   fontWeight: detalle.usaPapaFrita
                                     ? 'bold'
@@ -388,7 +388,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 sx={{
                                   fontSize: '8pt',
                                   border: '1px solid #475569',
-                                  py: 0.3,
+                                  py: 0.25,
                                   px: 0.4,
                                 }}
                               >
@@ -399,7 +399,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 sx={{
                                   fontSize: '8pt',
                                   border: '1px solid #475569',
-                                  py: 0.3,
+                                  py: 0.25,
                                   px: 0.4,
                                   fontStyle: 'italic',
                                   overflowWrap: 'anywhere',
@@ -413,7 +413,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                 sx={{
                                   fontSize: '8pt',
                                   border: '1px solid #475569',
-                                  py: 0.3,
+                                  py: 0.25,
                                   px: 0.4,
                                   color: '#334155',
                                 }}
@@ -427,7 +427,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                                   sx={{
                                     fontSize: '8pt',
                                     border: '1px solid #475569',
-                                    py: 0.3,
+                                    py: 0.25,
                                     px: 0.4,
                                     color: '#334155',
                                   }}
