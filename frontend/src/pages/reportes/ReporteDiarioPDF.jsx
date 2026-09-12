@@ -50,28 +50,44 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           margin: 10mm 12mm;
         }
 
-        .pdf-grid-container {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 6mm 8mm;
+        /* CONTENEDOR DE IMPRESIÓN SÓLIDO (Sin Grid / Sin Flexbox para evitar fallos de salto de página) */
+        .pdf-container-block {
           width: 100%;
           box-sizing: border-box;
         }
 
+        /* CADA TARJETA ES UN BLOQUE INLINE AL 49% DE ANCHO */
         .pdf-pedido-card {
-          width: 100%;
-          box-sizing: border-box;
+          display: inline-block !important;
+          vertical-align: top !important;
+          width: 49.5% !important;
+          box-sizing: border-box !important;
+          margin-bottom: 5mm !important;
+          padding-right: 2mm !important;
+          
+          /* REGLAS CRÍTICAS PARA QUE EL NAVEGADOR JAMÁS CORTE ESTA CAJA */
           break-inside: avoid !important;
           page-break-inside: avoid !important;
-          margin-bottom: 2mm;
+          -webkit-column-break-inside: avoid !important;
         }
 
-        .pdf-pedido-layout {
-          display: grid;
-          grid-template-columns: 110px minmax(0, 1fr);
-          gap: 0.5rem;
-          align-items: start;
+        /* SEPARACIÓN INTERNA DE LA TARJETA USANDO TABLA TRADICIONAL DE ESTRUCTURA */
+        .pdf-card-layout {
+          display: table;
           width: 100%;
+          table-layout: fixed;
+        }
+
+        .pdf-card-sidebar {
+          display: table-cell;
+          width: 110px;
+          vertical-align: top;
+          padding-right: 6px;
+        }
+
+        .pdf-card-main {
+          display: table-cell;
+          vertical-align: top;
         }
 
         .pdf-tabla {
@@ -86,15 +102,11 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             padding: 0 !important;
           }
 
-          .pdf-grid-container {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 6mm 8mm !important;
-          }
-
           .pdf-pedido-card {
+            display: inline-block !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
           }
 
           .pdf-encabezado {
@@ -130,8 +142,8 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         <Divider sx={{ borderColor: '#475569' }} />
       </Box>
 
-      {/* CONTENEDOR EN GRID DE 2 COLUMNAS */}
-      <Box className="pdf-grid-container">
+      {/* CONTENEDOR PRINCIPAL */}
+      <div className="pdf-container-block">
         {pedidos.map(({ clienteNombre, pedidosCliente, pedido }, pIdx) => {
           const observaciones = (pedido.notas || []).filter(
             (nota) => nota.tipo === 'OBSERVACION'
@@ -142,14 +154,14 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           );
 
           return (
-            /* TARJETA UNIFICADA (Evita roturas entre nombre y tabla) */
-            <Box
+            /* TARJETA INDIVISIBLE (inline-block + break-inside: avoid) */
+            <div
               key={pedido.id ?? `${clienteNombre}-${pIdx}`}
               className="pdf-pedido-card"
             >
-              <Box className="pdf-pedido-layout">
-                {/* CLIENTE Y OBSERVACIONES */}
-                <Box sx={{ minWidth: 0 }}>
+              <div className="pdf-card-layout">
+                {/* LADO IZQUIERDO: NOMBRE Y NOTAS */}
+                <div className="pdf-card-sidebar">
                   <Typography
                     variant="subtitle1"
                     fontWeight="bold"
@@ -157,7 +169,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       display: 'block',
                       width: '100%',
                       boxSizing: 'border-box',
-                      fontSize: '11pt',
+                      fontSize: '10pt',
                       lineHeight: 1.2,
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
@@ -176,7 +188,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     <Box sx={{ mt: 0.5 }}>
                       <Typography
                         sx={{
-                          fontSize: '9pt',
+                          fontSize: '8.5pt',
                           fontWeight: 'bold',
                           color: '#111827',
                         }}
@@ -188,7 +200,7 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         <Typography
                           key={nota.id ?? notaIdx}
                           sx={{
-                            fontSize: '9pt',
+                            fontSize: '8.5pt',
                             lineHeight: 1.15,
                             fontStyle: 'italic',
                             color: '#334155',
@@ -200,62 +212,18 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       ))}
                     </Box>
                   )}
-                </Box>
+                </div>
 
-                {/* TABLA DEL PEDIDO */}
-                <TableContainer sx={{ minWidth: 0, width: '100%' }}>
-                  <Table className="pdf-tabla" size="small">
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: '#0f172a' }}>
-                        <TableCell
-                          sx={{
-                            width: '20%',
-                            fontSize: '9pt',
-                            fontWeight: 'bold',
-                            border: '1px solid #1e293b',
-                            py: 0.3,
-                            px: 0.4,
-                            color: '#ffffff',
-                          }}
-                        >
-                          Cant.
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            width: mostrarPapaFrita ? '44%' : '56%',
-                            fontSize: '9pt',
-                            fontWeight: 'bold',
-                            border: '1px solid #1e293b',
-                            py: 0.3,
-                            px: 0.4,
-                            color: '#ffffff',
-                          }}
-                        >
-                          Producto
-                        </TableCell>
-
-                        <TableCell
-                          align="center"
-                          sx={{
-                            width: mostrarPapaFrita ? '18%' : '24%',
-                            fontSize: '9pt',
-                            fontWeight: 'bold',
-                            border: '1px solid #1e293b',
-                            py: 0.3,
-                            px: 0.4,
-                            color: '#ffffff',
-                          }}
-                        >
-                          Taper
-                        </TableCell>
-
-                        {mostrarPapaFrita && (
+                {/* LADO DERECHO: TABLA */}
+                <div className="pdf-card-main">
+                  <TableContainer sx={{ width: '100%' }}>
+                    <Table className="pdf-tabla" size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#0f172a' }}>
                           <TableCell
-                            align="center"
                             sx={{
-                              width: '18%',
-                              fontSize: '9pt',
+                              width: '20%',
+                              fontSize: '8.5pt',
                               fontWeight: 'bold',
                               border: '1px solid #1e293b',
                               py: 0.3,
@@ -263,140 +231,171 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               color: '#ffffff',
                             }}
                           >
-                            P. Frita
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    </TableHead>
-
-                    <TableBody>
-                      {(pedido.detalles || []).map((detalle, dIdx) => (
-                        <TableRow
-                          key={detalle.id ?? `d-${dIdx}`}
-                          sx={{
-                            '&:nth-of-type(even)': {
-                              bgcolor: '#dbeafe',
-                            },
-                          }}
-                        >
-                          <TableCell
-                            sx={{
-                              fontSize: '9pt',
-                              border: '1px solid #475569',
-                              py: 0.3,
-                              px: 0.4,
-                            }}
-                          >
-                            {detalle.cantidad}
+                            Cant.
                           </TableCell>
 
                           <TableCell
                             sx={{
-                              fontSize: '9pt',
-                              border: '1px solid #475569',
+                              width: mostrarPapaFrita ? '44%' : '56%',
+                              fontSize: '8.5pt',
+                              fontWeight: 'bold',
+                              border: '1px solid #1e293b',
                               py: 0.3,
                               px: 0.4,
-                              overflowWrap: 'anywhere',
+                              color: '#ffffff',
                             }}
                           >
-                            {detalle.producto?.nombre ||
-                              'Producto eliminado'}
+                            Producto
                           </TableCell>
 
                           <TableCell
                             align="center"
                             sx={{
-                              fontSize: '9pt',
-                              border: '1px solid #475569',
+                              width: mostrarPapaFrita ? '18%' : '24%',
+                              fontSize: '8.5pt',
+                              fontWeight: 'bold',
+                              border: '1px solid #1e293b',
                               py: 0.3,
                               px: 0.4,
-                              fontWeight: detalle.usaTaper
-                                ? 'bold'
-                                : 'normal',
-                              color: detalle.usaTaper
-                                ? '#15803d'
-                                : '#334155',
+                              color: '#ffffff',
                             }}
                           >
-                            {detalle.usaTaper ? '✔' : '—'}
+                            Taper
                           </TableCell>
 
                           {mostrarPapaFrita && (
                             <TableCell
                               align="center"
                               sx={{
-                                fontSize: '9pt',
-                                border: '1px solid #475569',
+                                width: '18%',
+                                fontSize: '8.5pt',
+                                fontWeight: 'bold',
+                                border: '1px solid #1e293b',
                                 py: 0.3,
                                 px: 0.4,
-                                fontWeight: detalle.usaPapaFrita
-                                  ? 'bold'
-                                  : 'normal',
-                                color: detalle.usaPapaFrita
-                                  ? '#15803d'
-                                  : '#334155',
+                                color: '#ffffff',
                               }}
                             >
-                              {detalle.usaPapaFrita ? '✔' : '—'}
+                              P. Frita
                             </TableCell>
                           )}
                         </TableRow>
-                      ))}
+                      </TableHead>
 
-                      {(pedido.notas || [])
-                        .filter((nota) => nota.tipo === 'ADICIONAL')
-                        .map((nota, nIdx) => (
+                      <TableBody>
+                        {(pedido.detalles || []).map((detalle, dIdx) => (
                           <TableRow
-                            key={nota.id ?? `n-${nIdx}`}
+                            key={detalle.id ?? `d-${dIdx}`}
                             sx={{
-                              bgcolor: '#ffedd5',
                               '&:nth-of-type(even)': {
-                                bgcolor: '#fed7aa',
+                                bgcolor: '#dbeafe',
                               },
                             }}
                           >
                             <TableCell
                               sx={{
-                                fontSize: '9pt',
+                                fontSize: '8.5pt',
                                 border: '1px solid #475569',
                                 py: 0.3,
                                 px: 0.4,
                               }}
                             >
-                              {nota.cantidad}
+                              {detalle.cantidad}
                             </TableCell>
 
                             <TableCell
                               sx={{
-                                fontSize: '9pt',
+                                fontSize: '8.5pt',
                                 border: '1px solid #475569',
                                 py: 0.3,
                                 px: 0.4,
-                                fontStyle: 'italic',
                                 overflowWrap: 'anywhere',
                               }}
                             >
-                              ➕ {nota.descripcion}
+                              {detalle.producto?.nombre ||
+                                'Producto eliminado'}
                             </TableCell>
 
                             <TableCell
                               align="center"
                               sx={{
-                                fontSize: '9pt',
+                                fontSize: '8.5pt',
                                 border: '1px solid #475569',
                                 py: 0.3,
                                 px: 0.4,
-                                color: '#334155',
+                                fontWeight: detalle.usaTaper
+                                  ? 'bold'
+                                  : 'normal',
+                                color: detalle.usaTaper
+                                  ? '#15803d'
+                                  : '#334155',
                               }}
                             >
-                              —
+                              {detalle.usaTaper ? '✔' : '—'}
                             </TableCell>
 
                             {mostrarPapaFrita && (
                               <TableCell
                                 align="center"
                                 sx={{
-                                  fontSize: '9pt',
+                                  fontSize: '8.5pt',
+                                  border: '1px solid #475569',
+                                  py: 0.3,
+                                  px: 0.4,
+                                  fontWeight: detalle.usaPapaFrita
+                                    ? 'bold'
+                                    : 'normal',
+                                  color: detalle.usaPapaFrita
+                                    ? '#15803d'
+                                    : '#334155',
+                                }}
+                              >
+                                {detalle.usaPapaFrita ? '✔' : '—'}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+
+                        {(pedido.notas || [])
+                          .filter((nota) => nota.tipo === 'ADICIONAL')
+                          .map((nota, nIdx) => (
+                            <TableRow
+                              key={nota.id ?? `n-${nIdx}`}
+                              sx={{
+                                bgcolor: '#ffedd5',
+                                '&:nth-of-type(even)': {
+                                  bgcolor: '#fed7aa',
+                                },
+                              }}
+                            >
+                              <TableCell
+                                sx={{
+                                  fontSize: '8.5pt',
+                                  border: '1px solid #475569',
+                                  py: 0.3,
+                                  px: 0.4,
+                                }}
+                              >
+                                {nota.cantidad}
+                              </TableCell>
+
+                              <TableCell
+                                sx={{
+                                  fontSize: '8.5pt',
+                                  border: '1px solid #475569',
+                                  py: 0.3,
+                                  px: 0.4,
+                                  fontStyle: 'italic',
+                                  overflowWrap: 'anywhere',
+                                }}
+                              >
+                                ➕ {nota.descripcion}
+                              </TableCell>
+
+                              <TableCell
+                                align="center"
+                                sx={{
+                                  fontSize: '8.5pt',
                                   border: '1px solid #475569',
                                   py: 0.3,
                                   px: 0.4,
@@ -405,17 +404,32 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               >
                                 —
                               </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            </Box>
+
+                              {mostrarPapaFrita && (
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    fontSize: '8.5pt',
+                                    border: '1px solid #475569',
+                                    py: 0.3,
+                                    px: 0.4,
+                                    color: '#334155',
+                                  }}
+                                >
+                                  —
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </div>
+              </div>
+            </div>
           );
         })}
-      </Box>
+      </div>
     </Box>
   );
 });
