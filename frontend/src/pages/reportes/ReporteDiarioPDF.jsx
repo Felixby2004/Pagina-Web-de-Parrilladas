@@ -12,6 +12,27 @@ import {
 } from '@mui/material';
 
 export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
+  /*
+   * ============================================================
+   * PREPARAR PEDIDOS
+   * ============================================================
+   *
+   * Cada pedido se convierte en un elemento independiente.
+   *
+   * IMPORTANTE:
+   * No agrupamos los pedidos en filas horizontales.
+   * El CSS de columnas se encargará de llevarlos:
+   *
+   * Hoja 1 izquierda
+   *        ↓
+   * Hoja 1 derecha
+   *        ↓
+   * Hoja 2 izquierda
+   *        ↓
+   * Hoja 2 derecha
+   *        ↓
+   * ...
+   */
   const pedidos = data.flatMap((cliente) =>
     (cliente.pedidos || []).map((pedido) => ({
       clienteNombre: cliente.cliente || 'Cliente sin nombre',
@@ -29,7 +50,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
         minHeight: '210mm',
         boxSizing: 'border-box',
 
-        // Padding vertical y horizontal de la hoja
         p: '10mm 12mm',
 
         bgcolor: '#f8fafc',
@@ -50,12 +70,185 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
       }}
     >
       <style>{`
+        /*
+         * ========================================================
+         * CONFIGURACIÓN DE PÁGINA
+         * ========================================================
+         */
+
         @page {
           size: A4 landscape;
           margin: 10mm 12mm;
         }
 
+        /*
+         * ========================================================
+         * CONTENEDOR PRINCIPAL DE PEDIDOS
+         * ========================================================
+         *
+         * AQUÍ está la parte importante.
+         *
+         * Usamos CSS MULTI-COLUMN en lugar de CSS GRID.
+         *
+         * El contenido se llena:
+         *
+         *   1. arriba -> abajo, columna izquierda
+         *   2. arriba -> abajo, columna derecha
+         *   3. siguiente página, columna izquierda
+         *   4. siguiente página, columna derecha
+         *
+         * Además:
+         * column-fill: auto
+         *
+         * hace que cada columna se llene verticalmente antes
+         * de continuar con la siguiente.
+         */
+
+        .pdf-pedidos-container {
+          column-count: 2;
+          column-gap: 5mm;
+          column-fill: auto;
+
+          /*
+           * Altura útil aproximada de una A4 horizontal.
+           *
+           * 210mm de alto
+           * - 20mm de márgenes
+           * = 190mm
+           *
+           * El encabezado ocupa una parte de esa altura.
+           */
+          height: calc(190mm - 18mm);
+
+          width: 100%;
+
+          /*
+           * Evita que el navegador cree un espacio vertical
+           * artificial entre los pedidos.
+           */
+          column-span: none;
+        }
+
+        /*
+         * ========================================================
+         * PEDIDO
+         * ========================================================
+         *
+         * IMPORTANTE:
+         *
+         * NO usamos:
+         *
+         *   break-inside: avoid-page
+         *
+         * porque eso impediría que una tabla continúe en la
+         * siguiente columna.
+         *
+         * Permitimos que el pedido se FRAGMENTE.
+         */
+
+        .pdf-pedido {
+          width: 100%;
+          min-width: 0;
+
+          /*
+           * Cada pedido debe comenzar como un bloque.
+           */
+          display: grid;
+
+          /*
+           * Cliente/Notas       Tabla
+           */
+          grid-template-columns:
+            minmax(31%, 0.8fr)
+            minmax(0, 2fr);
+
+          gap: 0.75rem;
+
+          align-items: start;
+
+          box-sizing: border-box;
+
+          /*
+           * Permitir fragmentación entre columnas/páginas.
+           */
+          break-inside: auto;
+          page-break-inside: auto;
+
+          /*
+           * Separación visual entre pedidos.
+           */
+          margin-bottom: 3mm;
+        }
+
+        /*
+         * ========================================================
+         * TABLA
+         * ========================================================
+         *
+         * La tabla también puede continuar en otra columna.
+         */
+
+        .pdf-tabla {
+          width: 100%;
+          table-layout: fixed;
+          border-collapse: collapse;
+          border: 2px solid #1e293b;
+        }
+
+        .pdf-tabla thead {
+          /*
+           * Si la tabla continúa en otra columna/página,
+           * el encabezado se vuelve a mostrar.
+           */
+          display: table-header-group;
+        }
+
+        /*
+         * IMPORTANTE:
+         *
+         * No impedir que la tabla completa se fragmente.
+         */
+        .pdf-tabla-container {
+          min-width: 0;
+          width: 100%;
+          overflow: visible;
+
+          break-inside: auto;
+          page-break-inside: auto;
+        }
+
+        /*
+         * Una fila sí debe permanecer completa.
+         *
+         * De esta manera no tendremos algo como:
+         *
+         * "Chuletas..."
+         *     ↓
+         * cambio de columna
+         *     ↓
+         * "...especiales"
+         *
+         * La fila completa pasa al siguiente espacio.
+         */
+        .pdf-tabla tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .pdf-tabla td,
+        .pdf-tabla th {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        /*
+         * ========================================================
+         * IMPRESIÓN
+         * ========================================================
+         */
+
         @media print {
+
           .reporte-pdf {
             width: auto !important;
             min-height: auto !important;
@@ -63,36 +256,78 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           }
 
           /*
-           * Evita que un pedido se corte entre dos hojas.
-           * Si no entra completo, pasa a la siguiente hoja.
+           * Mantener las dos columnas por hoja.
            */
-          .pdf-pedido {
-            break-inside: avoid-page !important;
-            page-break-inside: avoid !important;
+          .pdf-pedidos-container {
+            column-count: 2 !important;
+            column-gap: 5mm !important;
+            column-fill: auto !important;
+
+            height: calc(190mm - 18mm) !important;
+
+            width: 100% !important;
           }
 
           /*
-           * Si una tabla llegara a dividirse,
-           * conserva correctamente su encabezado.
+           * EL PEDIDO PUEDE CONTINUAR.
+           *
+           * No usar avoid-page aquí.
            */
-          .pdf-tabla thead {
-            display: table-header-group;
+          .pdf-pedido {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+
+            width: 100% !important;
+
+            margin-bottom: 3mm !important;
           }
 
+          /*
+           * La tabla puede continuar.
+           */
+          .pdf-tabla-container {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+          }
+
+          /*
+           * Pero las filas permanecen completas.
+           */
           .pdf-tabla tr,
           .pdf-tabla td,
           .pdf-tabla th {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
           }
+
+          /*
+           * Repetir encabezado de tabla cuando la tabla
+           * continúa.
+           */
+          .pdf-tabla thead {
+            display: table-header-group !important;
+          }
+
+          /*
+           * Evitar que el título principal quede separado
+           * innecesariamente.
+           */
+          .pdf-encabezado {
+            break-after: avoid-page !important;
+            page-break-after: avoid !important;
+          }
         }
       `}</style>
 
-      {/* ENCABEZADO */}
+      {/* ========================================================
+          ENCABEZADO
+          ======================================================== */}
+
       <Box
         className="pdf-encabezado"
         sx={{
           mb: 1.5,
+
           breakAfter: 'avoid-page',
           pageBreakAfter: 'avoid',
         }}
@@ -111,40 +346,50 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           Lista de Pedidos
         </Typography>
 
-        <Divider sx={{ borderColor: '#475569' }} />
+        <Divider
+          sx={{
+            borderColor: '#475569',
+          }}
+        />
       </Box>
 
-      {/*
-        Ya NO se limita a una cantidad fija de pedidos por página.
+      {/* ========================================================
+          CONTENEDOR DE PEDIDOS
+          ======================================================== */}
 
-        Los pedidos se acomodan según su altura real.
-        Cuando un pedido no entra completo al final de una página,
-        comienza en la siguiente.
-      */}
       <Box
+        className="pdf-pedidos-container"
         sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-
-          // Espacio horizontal entre ambas columnas
+          columnCount: 2,
           columnGap: '5mm',
+          columnFill: 'auto',
 
-          // Espacio vertical entre pedidos
-          rowGap: '3mm',
+          height: 'calc(190mm - 18mm)',
 
-          alignItems: 'start',
+          width: '100%',
         }}
       >
         {pedidos.map(
           ({ clienteNombre, pedidosCliente, pedido }, pIdx) => {
+            /*
+             * ====================================================
+             * OBSERVACIONES
+             * ====================================================
+             */
+
             const observaciones = (pedido.notas || []).filter(
               (nota) => nota.tipo === 'OBSERVACION'
             );
 
             /*
-             * Mostrar la columna Papa Frita si alguno
-             * de los pedidos del cliente usa papa frita.
+             * ====================================================
+             * PAPA FRITA
+             * ====================================================
+             *
+             * Se muestra la columna Papa Frita si alguno de
+             * los pedidos del cliente utiliza papa frita.
              */
+
             const mostrarPapaFrita = pedidosCliente.some((item) =>
               (item.detalles || []).some(
                 (detalle) => detalle.usaPapaFrita
@@ -153,40 +398,53 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
             return (
               <Box
-                key={pedido.id ?? `${clienteNombre}-${pIdx}`}
+                key={
+                  pedido.id ??
+                  `${clienteNombre}-${pIdx}`
+                }
                 className="pdf-pedido"
                 sx={{
                   display: 'grid',
 
                   /*
-                   * Columna izquierda:
-                   * nombre + observaciones.
+                   * IZQUIERDA:
+                   * cliente + observaciones
                    *
-                   * Columna derecha:
-                   * tabla del pedido.
+                   * DERECHA:
+                   * tabla
                    */
                   gridTemplateColumns:
                     'minmax(31%, 0.8fr) minmax(0, 2fr)',
 
                   gap: 0.75,
+
                   alignItems: 'start',
+
                   minWidth: 0,
+
+                  width: '100%',
+
                   boxSizing: 'border-box',
 
                   /*
                    * IMPORTANTE:
-                   * evita cortar un pedido entre páginas.
+                   *
+                   * Permitimos que este pedido continúe
+                   * en la siguiente columna.
                    */
-                  breakInside: 'avoid-page',
-                  pageBreakInside: 'avoid',
-                  WebkitColumnBreakInside: 'avoid',
+                  breakInside: 'auto',
+                  pageBreakInside: 'auto',
                 }}
               >
-                {/* ========================= */}
-                {/* CLIENTE + OBSERVACIONES */}
-                {/* ========================= */}
+                {/* =================================================
+                    CLIENTE + OBSERVACIONES
+                    ================================================= */}
 
-                <Box sx={{ minWidth: 0 }}>
+                <Box
+                  sx={{
+                    minWidth: 0,
+                  }}
+                >
                   <Typography
                     variant="subtitle1"
                     fontWeight="bold"
@@ -198,10 +456,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       fontSize: '10pt',
                       lineHeight: 1.15,
 
-                      /*
-                       * Evita que un nombre largo
-                       * desborde la columna.
-                       */
                       overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
 
@@ -219,9 +473,16 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     {clienteNombre}
                   </Typography>
 
-                  {/* OBSERVACIONES */}
+                  {/* ===============================================
+                      OBSERVACIONES
+                      =============================================== */}
+
                   {observaciones.length > 0 && (
-                    <Box sx={{ mt: 0.4 }}>
+                    <Box
+                      sx={{
+                        mt: 0.4,
+                      }}
+                    >
                       <Typography
                         sx={{
                           fontSize: '8pt',
@@ -232,35 +493,49 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         Notas:
                       </Typography>
 
-                      {observaciones.map((nota, notaIdx) => (
-                        <Typography
-                          key={nota.id ?? notaIdx}
-                          sx={{
-                            fontSize: '8pt',
-                            lineHeight: 1.15,
-                            fontStyle: 'italic',
-                            color: '#334155',
-                            overflowWrap: 'anywhere',
-                          }}
-                        >
-                          • {nota.texto}
-                        </Typography>
-                      ))}
+                      {observaciones.map(
+                        (nota, notaIdx) => (
+                          <Typography
+                            key={
+                              nota.id ??
+                              notaIdx
+                            }
+                            sx={{
+                              fontSize: '8pt',
+                              lineHeight: 1.15,
+                              fontStyle: 'italic',
+                              color: '#334155',
+
+                              overflowWrap:
+                                'anywhere',
+                            }}
+                          >
+                            • {nota.texto}
+                          </Typography>
+                        )
+                      )}
                     </Box>
                   )}
                 </Box>
 
-                {/* ================= */}
-                {/* TABLA DEL PEDIDO */}
-                {/* ================= */}
+                {/* =================================================
+                    TABLA DEL PEDIDO
+                    ================================================= */}
 
                 <TableContainer
+                  className="pdf-tabla-container"
                   sx={{
                     minWidth: 0,
+
+                    width: '100%',
+
                     overflow: 'visible',
 
-                    breakInside: 'avoid-page',
-                    pageBreakInside: 'avoid',
+                    /*
+                     * La tabla puede continuar.
+                     */
+                    breakInside: 'auto',
+                    pageBreakInside: 'auto',
                   }}
                 >
                   <Table
@@ -268,23 +543,41 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                     size="small"
                     sx={{
                       width: '100%',
+
                       tableLayout: 'fixed',
-                      borderCollapse: 'collapse',
-                      border: '2px solid #1e293b',
+
+                      borderCollapse:
+                        'collapse',
+
+                      border:
+                        '2px solid #1e293b',
                     }}
                   >
-                    {/* ENCABEZADO */}
+                    {/* =============================================
+                        ENCABEZADO DE TABLA
+                        ============================================= */}
+
                     <TableHead>
-                      <TableRow sx={{ bgcolor: '#0f172a' }}>
+                      <TableRow
+                        sx={{
+                          bgcolor: '#0f172a',
+                        }}
+                      >
                         {/* CANTIDAD */}
+
                         <TableCell
                           sx={{
                             width: '17%',
+
                             fontSize: '8pt',
                             fontWeight: 'bold',
-                            border: '1px solid #1e293b',
+
+                            border:
+                              '1px solid #1e293b',
+
                             py: 0.35,
                             px: 0.5,
+
                             color: '#ffffff',
                           }}
                         >
@@ -292,17 +585,23 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         </TableCell>
 
                         {/* PRODUCTO */}
+
                         <TableCell
                           sx={{
-                            width: mostrarPapaFrita
-                              ? '47%'
-                              : '58%',
+                            width:
+                              mostrarPapaFrita
+                                ? '47%'
+                                : '58%',
 
                             fontSize: '8pt',
                             fontWeight: 'bold',
-                            border: '1px solid #1e293b',
+
+                            border:
+                              '1px solid #1e293b',
+
                             py: 0.35,
                             px: 0.5,
+
                             color: '#ffffff',
                           }}
                         >
@@ -310,18 +609,24 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         </TableCell>
 
                         {/* TAPER */}
+
                         <TableCell
                           align="center"
                           sx={{
-                            width: mostrarPapaFrita
-                              ? '18%'
-                              : '25%',
+                            width:
+                              mostrarPapaFrita
+                                ? '18%'
+                                : '25%',
 
                             fontSize: '8pt',
                             fontWeight: 'bold',
-                            border: '1px solid #1e293b',
+
+                            border:
+                              '1px solid #1e293b',
+
                             py: 0.35,
                             px: 0.5,
+
                             color: '#ffffff',
                           }}
                         >
@@ -329,16 +634,22 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         </TableCell>
 
                         {/* PAPA FRITA */}
+
                         {mostrarPapaFrita && (
                           <TableCell
                             align="center"
                             sx={{
                               width: '18%',
+
                               fontSize: '8pt',
                               fontWeight: 'bold',
-                              border: '1px solid #1e293b',
+
+                              border:
+                                '1px solid #1e293b',
+
                               py: 0.35,
                               px: 0.5,
+
                               color: '#ffffff',
                             }}
                           >
@@ -348,9 +659,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                       </TableRow>
                     </TableHead>
 
-                    {/* CUERPO */}
+                    {/* =============================================
+                        CUERPO
+                        ============================================= */}
+
                     <TableBody>
-                      {/* PRODUCTOS */}
+                      {/* ===========================================
+                          PRODUCTOS
+                          =========================================== */}
+
                       {(pedido.detalles || []).map(
                         (detalle, dIdx) => (
                           <TableRow
@@ -359,20 +676,33 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                               `d-${dIdx}`
                             }
                             sx={{
-                              '&:nth-of-type(even)': {
-                                bgcolor: '#dbeafe',
-                              },
+                              '&:nth-of-type(even)':
+                                {
+                                  bgcolor:
+                                    '#dbeafe',
+                                },
 
-                              breakInside: 'avoid',
-                              pageBreakInside: 'avoid',
+                              /*
+                               * UNA FILA NO SE PARTE.
+                               *
+                               * Si no entra completa en el
+                               * espacio actual, pasa al siguiente.
+                               */
+                              breakInside:
+                                'avoid',
+                              pageBreakInside:
+                                'avoid',
                             }}
                           >
                             {/* CANTIDAD */}
+
                             <TableCell
                               sx={{
                                 fontSize: '8pt',
+
                                 border:
                                   '1px solid #475569',
+
                                 py: 0.25,
                                 px: 0.5,
                               }}
@@ -381,13 +711,17 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             </TableCell>
 
                             {/* PRODUCTO */}
+
                             <TableCell
                               sx={{
                                 fontSize: '8pt',
+
                                 border:
                                   '1px solid #475569',
+
                                 py: 0.25,
                                 px: 0.5,
+
                                 overflowWrap:
                                   'anywhere',
                               }}
@@ -398,12 +732,15 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             </TableCell>
 
                             {/* TAPER */}
+
                             <TableCell
                               align="center"
                               sx={{
                                 fontSize: '8pt',
+
                                 border:
                                   '1px solid #475569',
+
                                 py: 0.25,
                                 px: 0.5,
 
@@ -424,13 +761,16 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                             </TableCell>
 
                             {/* PAPA FRITA */}
+
                             {mostrarPapaFrita && (
                               <TableCell
                                 align="center"
                                 sx={{
                                   fontSize: '8pt',
+
                                   border:
                                     '1px solid #475569',
+
                                   py: 0.25,
                                   px: 0.5,
 
@@ -454,95 +794,127 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
                         )
                       )}
 
-                      {/* ================= */}
-                      {/* NOTAS ADICIONALES */}
-                      {/* ================= */}
+                      {/* ===========================================
+                          NOTAS ADICIONALES
+                          =========================================== */}
 
                       {(pedido.notas || [])
                         .filter(
                           (nota) =>
-                            nota.tipo === 'ADICIONAL'
+                            nota.tipo ===
+                            'ADICIONAL'
                         )
-                        .map((nota, nIdx) => (
-                          <TableRow
-                            key={
-                              nota.id ??
-                              `n-${nIdx}`
-                            }
-                            sx={{
-                              bgcolor: '#ffedd5',
-
-                              '&:nth-of-type(even)': {
-                                bgcolor: '#fed7aa',
-                              },
-
-                              breakInside: 'avoid',
-                              pageBreakInside:
-                                'avoid',
-                            }}
-                          >
-                            {/* CANTIDAD */}
-                            <TableCell
+                        .map(
+                          (nota, nIdx) => (
+                            <TableRow
+                              key={
+                                nota.id ??
+                                `n-${nIdx}`
+                              }
                               sx={{
-                                fontSize: '8pt',
-                                border:
-                                  '1px solid #475569',
-                                py: 0.25,
-                                px: 0.5,
+                                bgcolor:
+                                  '#ffedd5',
+
+                                '&:nth-of-type(even)':
+                                  {
+                                    bgcolor:
+                                      '#fed7aa',
+                                  },
+
+                                /*
+                                 * Una nota adicional
+                                 * tampoco se parte.
+                                 */
+                                breakInside:
+                                  'avoid',
+                                pageBreakInside:
+                                  'avoid',
                               }}
                             >
-                              {nota.cantidad}
-                            </TableCell>
+                              {/* CANTIDAD */}
 
-                            {/* DESCRIPCIÓN */}
-                            <TableCell
-                              sx={{
-                                fontSize: '8pt',
-                                border:
-                                  '1px solid #475569',
-                                py: 0.25,
-                                px: 0.5,
-                                fontStyle: 'italic',
-                                overflowWrap:
-                                  'anywhere',
-                              }}
-                            >
-                              ➕ {nota.descripcion}
-                            </TableCell>
+                              <TableCell
+                                sx={{
+                                  fontSize: '8pt',
 
-                            {/* TAPER */}
-                            <TableCell
-                              align="center"
-                              sx={{
-                                fontSize: '8pt',
-                                border:
-                                  '1px solid #475569',
-                                py: 0.25,
-                                px: 0.5,
-                                color: '#334155',
-                              }}
-                            >
-                              —
-                            </TableCell>
+                                  border:
+                                    '1px solid #475569',
 
-                            {/* PAPA FRITA */}
-                            {mostrarPapaFrita && (
+                                  py: 0.25,
+                                  px: 0.5,
+                                }}
+                              >
+                                {nota.cantidad}
+                              </TableCell>
+
+                              {/* DESCRIPCIÓN */}
+
+                              <TableCell
+                                sx={{
+                                  fontSize: '8pt',
+
+                                  border:
+                                    '1px solid #475569',
+
+                                  py: 0.25,
+                                  px: 0.5,
+
+                                  fontStyle:
+                                    'italic',
+
+                                  overflowWrap:
+                                    'anywhere',
+                                }}
+                              >
+                                ➕{' '}
+                                {nota.descripcion}
+                              </TableCell>
+
+                              {/* TAPER */}
+
                               <TableCell
                                 align="center"
                                 sx={{
                                   fontSize: '8pt',
+
                                   border:
                                     '1px solid #475569',
+
                                   py: 0.25,
                                   px: 0.5,
-                                  color: '#334155',
+
+                                  color:
+                                    '#334155',
                                 }}
                               >
                                 —
                               </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
+
+                              {/* PAPA FRITA */}
+
+                              {mostrarPapaFrita && (
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    fontSize:
+                                      '8pt',
+
+                                    border:
+                                      '1px solid #475569',
+
+                                    py: 0.25,
+                                    px: 0.5,
+
+                                    color:
+                                      '#334155',
+                                  }}
+                                >
+                                  —
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          )
+                        )}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -555,4 +927,5 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
   );
 });
 
-ReporteDiarioPDF.displayName = 'ReporteDiarioPDF';
+ReporteDiarioPDF.displayName =
+  'ReporteDiarioPDF';
