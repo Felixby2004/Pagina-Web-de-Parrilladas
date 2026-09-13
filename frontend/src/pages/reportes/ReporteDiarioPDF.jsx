@@ -118,7 +118,23 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           column-gap: 6mm;
           column-fill: auto;
 
-          height: 180mm;
+          /*
+           * IMPORTANTE: NO fijar una altura aquí (ni "height",
+           * ni "calc(...)").
+           *
+           * Si el contenedor tiene una altura FIJA menor a lo que
+           * necesita el contenido, el navegador entiende "esta caja
+           * cabe en una sola hoja" y en vez de partirla a la hoja 2,
+           * agrega columnas EXTRA hacia el costado para meter todo
+           * ahí mismo (eso es la "3ra columna" que se ve saliéndose
+           * de la hoja).
+           *
+           * Dejando la altura en "auto", el navegador entiende que
+           * la caja puede ser tan alta como haga falta, y es su
+           * propio motor de paginación (basado en el tamaño de
+           * @page) el que la corta correctamente en hoja 1, hoja 2,
+           * hoja 3... respetando siempre column-count: 2 por hoja.
+           */
 
           width: 100%;
 
@@ -128,21 +144,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
              empiece pegado justo en el borde superior de
              cada columna/página cuando continúa. */
           padding-top: 1mm;
-
-          /*
-           * IMPORTANTE: "overflow" debe quedarse en "visible"
-           * (el valor por defecto, así que ni lo escribimos).
-           *
-           * Cualquier otro valor (hidden, auto, scroll) convierte
-           * a este contenedor en "monolítico" para la paginación:
-           * el motor de impresión deja de mandar el desborde a la
-           * hoja 2, 3... y simplemente lo recorta ahí mismo.
-           *
-           * La "3ra columna" que se ve en la vista previa del
-           * navegador es solo un efecto visual de estar en pantalla
-           * (no hay concepto de "hoja" fuera del diálogo de
-           * impresión). No afecta al PDF/impresión real.
-           */
         }
 
         /*
@@ -275,8 +276,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             column-gap: 6mm !important;
             column-fill: auto !important;
 
-            height: 180mm !important;
-
             width: 100% !important;
 
             padding-top: 1mm !important;
@@ -371,8 +370,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           columnCount: 2,
           columnGap: '6mm',
           columnFill: 'auto',
-
-          height: '180mm',
 
           width: '100%',
 
