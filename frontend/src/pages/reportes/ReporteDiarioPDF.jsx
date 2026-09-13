@@ -57,13 +57,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
 
         p: '8mm 10mm',
 
-        // Contiene el contenido dentro del ancho de la hoja en
-        // pantalla. Si no, cuando el contenedor de pedidos no
-        // cabe en la altura fijada, el navegador agrega columnas
-        // extra hacia la derecha en vez de esperar a la hoja 2
-        // (eso se ve como una "3ra columna" fantasma).
-        overflow: 'hidden',
-
         bgcolor: '#f8fafc',
         fontFamily: 'Arial, sans-serif',
         color: '#0f172a',
@@ -78,10 +71,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           minHeight: 'auto',
           p: 0,
           bgcolor: '#ffffff',
-          // En impresión SÍ debe poder desbordar hacia hoja 2, 3...
-          // (el motor de impresión pagina el desborde real, no lo
-          // recorta como hace "overflow: hidden" en pantalla).
-          overflow: 'visible',
         },
       }}
     >
@@ -140,11 +129,20 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
              cada columna/página cuando continúa. */
           padding-top: 1mm;
 
-          /* En pantalla: recorta cualquier desborde para que
-             nunca se vea una "3ra columna" fantasma saliéndose
-             de la hoja. En impresión (más abajo) se libera para
-             que el desborde real pagine a la hoja 2, 3... */
-          overflow: hidden;
+          /*
+           * IMPORTANTE: "overflow" debe quedarse en "visible"
+           * (el valor por defecto, así que ni lo escribimos).
+           *
+           * Cualquier otro valor (hidden, auto, scroll) convierte
+           * a este contenedor en "monolítico" para la paginación:
+           * el motor de impresión deja de mandar el desborde a la
+           * hoja 2, 3... y simplemente lo recorta ahí mismo.
+           *
+           * La "3ra columna" que se ve en la vista previa del
+           * navegador es solo un efecto visual de estar en pantalla
+           * (no hay concepto de "hoja" fuera del diálogo de
+           * impresión). No afecta al PDF/impresión real.
+           */
         }
 
         /*
@@ -270,7 +268,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             width: auto !important;
             min-height: auto !important;
             padding: 0 !important;
-            overflow: visible !important;
           }
 
           .pdf-pedidos-container {
@@ -283,10 +280,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
             width: 100% !important;
 
             padding-top: 1mm !important;
-
-            /* Aquí sí debe desbordar: el motor de impresión
-               convierte ese desborde en hoja 2, hoja 3... */
-            overflow: visible !important;
           }
 
           .pdf-pedido {
@@ -384,12 +377,6 @@ export const ReporteDiarioPDF = forwardRef(({ data = [] }, ref) => {
           width: '100%',
 
           pt: '1mm',
-
-          overflow: 'hidden',
-
-          '@media print': {
-            overflow: 'visible',
-          },
         }}
       >
         {pedidos.map(
