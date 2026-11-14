@@ -1,18 +1,20 @@
 import { z } from 'zod';
 
+const dominiosCanva = ['canva.com', 'canva.site', 'canva.link'];
+
 export const listaProductosCanvaUrlSchema = z.string().trim().max(2048).transform((value, ctx) => {
   if (value === '') return null;
 
   const url = URL.canParse(value) ? new URL(value) : null;
   if (url?.protocol === 'https:' &&
     !url.username && !url.password &&
-    ['canva.com', 'canva.site'].some((domain) =>
+    dominiosCanva.some((domain) =>
       url.hostname === domain || url.hostname.endsWith(`.${domain}`)
     )) {
     return url.href;
   }
 
-  ctx.addIssue({ code: 'custom', message: 'Ingresa un enlace válido de Canva (https://)' });
+  ctx.addIssue({ code: 'custom', message: 'Ingresa un enlace de Canva con https://, por ejemplo https://canva.link/…' });
   return z.NEVER;
 });
 
