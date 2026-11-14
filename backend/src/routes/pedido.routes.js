@@ -5,12 +5,14 @@ import {
   pedidoSchema,
   pedidoIdSchema,
   pedidoQuerySchema,
+  estadosPedidosSchema,
 } from '../validators/pedido.validator.js';
 import {
   crearPedido,
   listarPedidos,
   obtenerPedido,
   actualizarPedido,
+  actualizarEstadosPedidos,
   cerrarPedido,
   eliminarPedido,
 } from '../controllers/pedido.controller.js';
@@ -23,6 +25,7 @@ router.use(autenticar);
 router.get('/', validate(pedidoQuerySchema, 'query'), listarPedidos);
 router.get('/:id', validate(pedidoIdSchema, 'params'), obtenerPedido);
 router.post('/', validate(pedidoSchema), crearPedido);
+router.patch('/estados', validate(estadosPedidosSchema), actualizarEstadosPedidos);
 router.put('/:id', validate(pedidoIdSchema, 'params'), actualizarPedido);
 router.post('/:id/cerrar', validate(pedidoIdSchema, 'params'), cerrarPedido);
 router.delete('/:id', validate(pedidoIdSchema, 'params'), eliminarPedido);

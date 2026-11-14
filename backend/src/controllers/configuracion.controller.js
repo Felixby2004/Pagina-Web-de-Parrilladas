@@ -3,6 +3,7 @@ import {
   actualizarConfiguracionService,
 } from '../services/configuracion.service.js';
 import cloudinary from '../config/cloudinary.js';
+import { listaProductosCanvaUrlSchema } from '../validators/configuracion.validator.js';
 
 export const obtenerConfiguracion = async (req, res, next) => {
   try {
@@ -15,7 +16,15 @@ export const obtenerConfiguracion = async (req, res, next) => {
 
 export const actualizarConfiguracion = async (req, res, next) => {
   try {
-    const { nombreNegocio } = req.body;
+    const { nombreNegocio, listaProductosCanvaUrl } = req.body;
+    const data = { nombreNegocio };
+    if (listaProductosCanvaUrl !== undefined) {
+      const enlace = listaProductosCanvaUrlSchema.safeParse(listaProductosCanvaUrl);
+      if (!enlace.success) {
+        return res.status(400).json({ error: enlace.error.issues[0].message });
+      }
+      data.listaProductosCanvaUrl = enlace.data;
+    }
     const logoFile = req.files?.logo?.[0] || null;
     const listaProductosFile = req.files?.listaProductosImagen?.[0] || null;
 
@@ -42,7 +51,6 @@ export const actualizarConfiguracion = async (req, res, next) => {
       transformation: [{ width: 1200, crop: 'limit' }],
     });
 
-    const data = { nombreNegocio };
     if (logoUrl) {
       data.logoUrl = logoUrl;
     }

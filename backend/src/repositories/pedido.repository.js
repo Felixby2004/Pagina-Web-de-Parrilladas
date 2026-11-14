@@ -41,7 +41,7 @@ export const obtenerPedidos = async (filtros = {}, paginacion = {}) => {
       where,
       skip,
       take: limit,
-      orderBy: { fecha: 'desc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
       include: {
         detalles: {
           include: { producto: true }
@@ -86,6 +86,17 @@ export const actualizarPedido = async (id, data) => {
       notas: true,
     }
   });
+};
+
+export const actualizarEstadosPedidos = async (cambios) => {
+  const cambiosOrdenados = [...cambios].sort((a, b) => a.id - b.id);
+  return prisma.$transaction(cambiosOrdenados.map(({ id, estado }) =>
+    prisma.pedido.update({
+      where: { id, visible: true },
+      data: { estado },
+      select: { id: true },
+    })
+  ));
 };
 
 // ELIMINACIÓN LÓGICA

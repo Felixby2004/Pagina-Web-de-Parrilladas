@@ -23,6 +23,7 @@ export default function ConfiguracionNegocio() {
   const [previewLogo, setPreviewLogo] = useState('');
   const [listaProductosImagen, setListaProductosImagen] = useState(null);
   const [previewListaProductosImagen, setPreviewListaProductosImagen] = useState('');
+  const [listaProductosCanvaUrl, setListaProductosCanvaUrl] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -31,6 +32,7 @@ export default function ConfiguracionNegocio() {
       setNombre(configuracion.nombreNegocio || '');
       setPreviewLogo(configuracion.logoUrl || '');
       setPreviewListaProductosImagen(configuracion.listaProductosUrl || '');
+      setListaProductosCanvaUrl(configuracion.listaProductosCanvaUrl || '');
     }
   }, [configuracion]);
 
@@ -75,6 +77,9 @@ export default function ConfiguracionNegocio() {
 
     const formData = new FormData();
     formData.append('nombreNegocio', nombre);
+    if (listaProductosCanvaUrl !== (configuracion?.listaProductosCanvaUrl || '')) {
+      formData.append('listaProductosCanvaUrl', listaProductosCanvaUrl.trim());
+    }
     if (logo) {
       formData.append('logo', logo);
     }
@@ -89,7 +94,7 @@ export default function ConfiguracionNegocio() {
       setListaProductosImagen(null);
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
-      setError(err.message || 'Error al actualizar configuración');
+      setError(err.response?.data?.error || 'Error al actualizar configuración');
       setTimeout(() => setError(''), 4000);
     }
   };
@@ -262,6 +267,27 @@ export default function ConfiguracionNegocio() {
                 <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
                   Esta imagen se usa en Productos para el botón "Lista imagen". Formatos: JPEG, PNG, WEBP. Máx: 5MB
                 </Typography>
+                <TextField
+                  label="Enlace de Canva"
+                  type="url"
+                  value={listaProductosCanvaUrl}
+                  onChange={(e) => setListaProductosCanvaUrl(e.target.value)}
+                  placeholder="https://www.canva.com/design/..."
+                  fullWidth
+                  disabled={isLoading || actualizarLoading}
+                  slotProps={{ htmlInput: { maxLength: 2048 } }}
+                  sx={{ mt: 2 }}
+                />
+                {configuracion?.listaProductosCanvaUrl && (
+                  <Button
+                    href={configuracion.listaProductosCanvaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ mt: 1 }}
+                  >
+                    Abrir en Canva
+                  </Button>
+                )}
               </Box>
 
               <Button

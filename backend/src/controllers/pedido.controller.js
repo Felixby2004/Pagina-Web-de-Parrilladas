@@ -3,6 +3,7 @@ import {
   obtenerPedidosService,
   obtenerPedidoPorIdService,
   actualizarPedidoService,
+  actualizarEstadosPedidosService,
   cerrarPedidoService,
   eliminarPedidoService,
 } from '../services/pedido.service.js';
@@ -50,6 +51,15 @@ export const actualizarPedido = async (req, res, next) => {
     const { id } = req.params;
     const pedido = await actualizarPedidoService(Number(id), req.body);
     res.json({ mensaje: 'Pedido actualizado', pedido });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const actualizarEstadosPedidos = async (req, res, next) => {
+  try {
+    const actualizados = await actualizarEstadosPedidosService(req.body.cambios);
+    res.json({ actualizados });
   } catch (error) {
     next(error);
   }

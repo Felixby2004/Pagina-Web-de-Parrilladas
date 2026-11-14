@@ -17,6 +17,10 @@ export const pedidoService = {
     const response = await api.put(`/pedidos/${id}`, data);
     return response.data;
   },
+  actualizarEstados: async (cambios) => {
+    const response = await api.patch('/pedidos/estados', { cambios });
+    return response.data;
+  },
   cerrar: async (id) => {
     const response = await api.post(`/pedidos/${id}/cerrar`);
     return response.data;

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const estadoPedidoSchema = z.enum(['ABIERTO', 'PAGADO', 'CANCELADO']);
+
 export const detallePedidoSchema = z.object({
   productoId: z.number().int().positive(),
   cantidad: z.number().int().positive(),
@@ -35,7 +37,7 @@ export const pedidoSchema = z.object({
         && date.getUTCDate() === day;
     }, 'La fecha no es válida')
     .optional(),
-  estado: z.enum(['ABIERTO', 'PAGADO', 'CANCELADO']).optional(),
+  estado: estadoPedidoSchema.optional(),
   detalles: z.array(detallePedidoSchema).min(1, 'Debe agregar al menos un producto'),
   notas: z.array(notaSchema).optional().default([]),
 });
@@ -44,11 +46,21 @@ export const pedidoIdSchema = z.object({
   id: z.string().regex(/^\d+$/).transform(Number),
 });
 
+export const estadosPedidosSchema = z.object({
+  cambios: z.array(z.object({
+    id: z.number().int().positive().max(2147483647),
+    estado: estadoPedidoSchema,
+  })).nonempty().refine(
+    (cambios) => new Set(cambios.map(({ id }) => id)).size === cambios.length,
+    'Cada pedido debe aparecer una sola vez',
+  ),
+});
+
 export const pedidoQuerySchema = z.object({
   page: z.string().regex(/^\d+$/).default('1').transform(Number),
   limit: z.string().regex(/^\d+$/).default('10').transform(Number),
   fechaInicio: z.string().datetime().optional(),
   fechaFin: z.string().datetime().optional(),
-  estado: z.enum(['ABIERTO', 'PAGADO', 'CANCELADO']).optional(),
+  estado: estadoPedidoSchema.optional(),
   search: z.string().optional().default(''),
 });

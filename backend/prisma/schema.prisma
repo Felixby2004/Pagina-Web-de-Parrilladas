@@ -129,6 +129,7 @@ model Configuracion {
   nombreNegocio String   @db.VarChar(200)
   logoUrl       String?  @db.VarChar(500)
   listaProductosUrl String? @db.VarChar(500)
+  listaProductosCanvaUrl String? @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

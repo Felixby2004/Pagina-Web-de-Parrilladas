@@ -3,6 +3,7 @@ import {
   obtenerPedidos,
   obtenerPedidoPorId,
   actualizarPedido,
+  actualizarEstadosPedidos,
   eliminarPedido,
 } from '../repositories/pedido.repository.js';
 import {
@@ -189,6 +190,21 @@ export const cerrarPedidoService = async (id) => {
   });
 
   return pedidoActualizado;
+};
+
+export const actualizarEstadosPedidosService = async (cambios) => {
+  try {
+    const pedidos = await actualizarEstadosPedidos(cambios);
+    return pedidos.length;
+  } catch (error) {
+    if (error.code === 'P2025') {
+      throw {
+        statusCode: 409,
+        message: 'Algún pedido seleccionado ya no está disponible. Quita su selección e inténtalo de nuevo.',
+      };
+    }
+    throw error;
+  }
 };
 
 export const eliminarPedidoService = async (id) => {

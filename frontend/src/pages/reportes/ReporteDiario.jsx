@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   Container,
   Typography,
   Paper,
   TextField,
   Button,
-  Box,
   Chip,
   Alert,
   CircularProgress,
@@ -19,8 +18,6 @@ import {
 } from '@mui/material';
 import { Search, PictureAsPdf } from '@mui/icons-material';
 import { reporteService } from '../../services/reporte.service';
-import { generarPDF } from '../../utils/pdfGenerator';
-import { ReporteDiarioPDF } from './ReporteDiarioPDF';
 import { formatCurrency, getDateInTimeZoneISO } from '../../utils/formateador';
 
 export default function ReporteDiario() {
@@ -29,7 +26,6 @@ export default function ReporteDiario() {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const pdfRef = useRef();
 
   const handleBuscar = async () => {
     if (!fecha) return;
@@ -77,13 +73,8 @@ export default function ReporteDiario() {
 
     setGenerandoPDF(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      if (pdfRef.current) {
-        await generarPDF(
-          pdfRef.current,
-          `ListaPedidos_${fecha}.pdf`
-        );
-      }
+      const { crearReporteDiarioPdf } = await import('./reporteDiarioPdf.js');
+      crearReporteDiarioPdf(data).save(`ListaPedidos_${fecha}.pdf`);
     } catch (err) {
       console.error('Error al generar PDF:', err);
       setError('Error al generar el PDF');
@@ -103,8 +94,6 @@ export default function ReporteDiario() {
         }))
       )
     : [];
-
-  const fechaFormateada = fecha ? new Date(fecha).toLocaleDateString('es-PE') : '';
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4 }}>
@@ -244,16 +233,6 @@ export default function ReporteDiario() {
         </Paper>
       )}
 
-      {/* Componente oculto para el PDF */}
-      <Box sx={{ position: 'absolute', left: -9999, top: 0, opacity: 0, pointerEvents: 'none' }}>
-        {data && data.length > 0 && (
-          <ReporteDiarioPDF
-            ref={pdfRef}
-            data={data}
-            fecha={fecha}
-          />
-        )}
-      </Box>
     </Container>
   );
 }

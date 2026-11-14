@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Container,
   Typography,
@@ -12,6 +12,7 @@ import {
   TablePagination,
   Button,
   Chip,
+  Checkbox,
   IconButton,
   Box,
   TextField,
@@ -27,8 +28,9 @@ import { usePedidos } from '../../hooks/usePedidos';
 import { formatCurrency, formatDate } from '../../utils/formateador';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Loading } from '../../components/common/Loading';
+import { ESTADOS_PEDIDO } from '../../utils/constants';
 
-const estados = ['ABIERTO', 'PAGADO', 'CANCELADO'];
+const estados = Object.values(ESTADOS_PEDIDO);
 
 export default function PedidosList() {
   const navigate = useNavigate();
@@ -38,13 +40,53 @@ export default function PedidosList() {
   const [estado, setEstado] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState(null);
+  const [seleccion, setSeleccion] = useState(() => new Map());
 
-  const { pedidos, paginacion, isLoading, eliminar, eliminarLoading } = usePedidos({
+  const {
+    pedidos,
+    paginacion,
+    isLoading,
+    eliminar,
+    eliminarLoading,
+    actualizarEstados,
+    actualizarEstadosLoading,
+  } = usePedidos({
     page: page + 1,
     limit: rowsPerPage,
     search,
     estado,
   });
+
+  const seleccionadosEnPagina = pedidos.filter(({ id }) => seleccion.has(id)).length;
+  const todaLaPaginaSeleccionada = pedidos.length > 0 && seleccionadosEnPagina === pedidos.length;
+  const cambios = [...seleccion]
+    .filter(([, estado]) => estado !== null)
+    .map(([id, estado]) => ({ id, estado }));
+
+  const cambiarSeleccion = (ids, seleccionados) => {
+    setSeleccion((anterior) => {
+      const siguiente = new Map(anterior);
+      ids.forEach((id) => {
+        if (!seleccionados) siguiente.delete(id);
+        else if (!siguiente.has(id)) siguiente.set(id, null);
+      });
+      return siguiente;
+    });
+  };
+
+  const aplicarEstado = (nuevoEstado) => {
+    setSeleccion((anterior) => new Map([...anterior.keys()].map((id) => [id, nuevoEstado])));
+  };
+
+  const guardarEstados = async () => {
+    try {
+      await actualizarEstados(cambios);
+      setSeleccion(new Map());
+      setPage(0);
+    } catch {
+      // El aviso de error se muestra desde usePedidos y los cambios quedan disponibles.
+    }
+  };
 
   const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => {
@@ -54,7 +96,8 @@ export default function PedidosList() {
 
   const handleDelete = () => {
     if (selectedPedido) {
-      eliminar(selectedPedido.id);
+      const { id } = selectedPedido;
+      eliminar(id, { onSuccess: () => cambiarSeleccion([id], false) });
       setDeleteDialogOpen(false);
       setSelectedPedido(null);
     }
@@ -81,6 +124,7 @@ export default function PedidosList() {
   const handleClearFilters = () => {
     setSearch('');
     setEstado('');
+    setPage(0);
   };
 
   return (
@@ -138,7 +182,10 @@ export default function PedidosList() {
             variant="outlined"
             size="small"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -151,10 +198,14 @@ export default function PedidosList() {
             fullWidth
           />
           <FormControl size="small" fullWidth>
-            <InputLabel>Estado</InputLabel>
+            <InputLabel id="filtro-estado-label">Estado</InputLabel>
             <Select
+              labelId="filtro-estado-label"
               value={estado}
-              onChange={(e) => setEstado(e.target.value)}
+              onChange={(e) => {
+                setEstado(e.target.value);
+                setPage(0);
+              }}
               label="Estado"
             >
               <MenuItem value="">Todos</MenuItem>
@@ -164,6 +215,7 @@ export default function PedidosList() {
             </Select>
           </FormControl>
           <IconButton
+            aria-label="Limpiar filtros"
             onClick={handleClearFilters}
             color="primary"
             sx={{ alignSelf: 'center', justifySelf: { xs: 'start', lg: 'center' } }}
@@ -173,10 +225,51 @@ export default function PedidosList() {
         </Box>
       </Paper>
 
+      {seleccion.size > 0 && (
+        <Paper sx={{ p: 2, mb: 2, borderRadius: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography aria-live="polite">
+            {seleccion.size === 1 ? '1 pedido seleccionado' : `${seleccion.size} pedidos seleccionados`}
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 190 }}>
+            <InputLabel id="estado-seleccion-label">Estado de la selección</InputLabel>
+            <Select
+              labelId="estado-seleccion-label"
+              label="Estado de la selección"
+              value=""
+              disabled={actualizarEstadosLoading}
+              onChange={(e) => aplicarEstado(e.target.value)}
+            >
+              {estados.map((e) => (
+                <MenuItem key={e} value={e}>{getEstadoLabel(e)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            disabled={cambios.length === 0 || actualizarEstadosLoading}
+            onClick={guardarEstados}
+          >
+            {actualizarEstadosLoading ? 'Guardando…' : `Guardar estados (${cambios.length})`}
+          </Button>
+          <Button disabled={actualizarEstadosLoading} onClick={() => setSeleccion(new Map())}>
+            Limpiar selección
+          </Button>
+        </Paper>
+      )}
+
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={todaLaPaginaSeleccionada}
+                  indeterminate={seleccionadosEnPagina > 0 && !todaLaPaginaSeleccionada}
+                  disabled={!pedidos.length || actualizarEstadosLoading}
+                  onChange={(_, checked) => cambiarSeleccion(pedidos.map(({ id }) => id), checked)}
+                  slotProps={{ input: { 'aria-label': 'Seleccionar todos los pedidos de esta página' } }}
+                />
+              </TableCell>
               <TableCell>ID</TableCell>
               <TableCell>Cliente</TableCell>
               <TableCell>Fecha</TableCell>
@@ -189,23 +282,49 @@ export default function PedidosList() {
             {pedidos.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center">
-                  <Typography variant="body1" color="textSecondary" sx={{ py: 4 }}>
-                    No hay pedidos registrados
-                  </Typography>
+                  {isLoading ? <Loading size={28} /> : (
+                    <Typography variant="body1" color="textSecondary" sx={{ py: 4 }}>
+                      No hay pedidos registrados
+                    </Typography>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
               pedidos.map((pedido) => (
-                <TableRow key={pedido.id} hover>
+                <TableRow key={pedido.id} hover selected={seleccion.has(pedido.id)}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={seleccion.has(pedido.id)}
+                      disabled={actualizarEstadosLoading}
+                      onChange={(_, checked) => cambiarSeleccion([pedido.id], checked)}
+                      slotProps={{ input: { 'aria-label': `Seleccionar pedido #${pedido.id}` } }}
+                    />
+                  </TableCell>
                   <TableCell>#{pedido.id}</TableCell>
                   <TableCell>{pedido.nombreCliente || 'Anónimo'}</TableCell>
                   <TableCell>{formatDate(pedido.fecha)}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={getEstadoLabel(pedido.estado)}
-                      color={getEstadoColor(pedido.estado)}
-                      size="small"
-                    />
+                    {seleccion.has(pedido.id) ? (
+                      <Select
+                        size="small"
+                        value={seleccion.get(pedido.id) ?? pedido.estado}
+                        disabled={actualizarEstadosLoading}
+                        inputProps={{ 'aria-label': `Estado del pedido #${pedido.id}` }}
+                        onChange={(e) => setSeleccion((anterior) =>
+                          new Map(anterior).set(pedido.id, e.target.value === pedido.estado ? null : e.target.value)
+                        )}
+                      >
+                        {estados.map((e) => (
+                          <MenuItem key={e} value={e}>{getEstadoLabel(e)}</MenuItem>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Chip
+                        label={getEstadoLabel(pedido.estado)}
+                        color={getEstadoColor(pedido.estado)}
+                        size="small"
+                      />
+                    )}
                   </TableCell>
                   <TableCell align="right">{formatCurrency(pedido.total)}</TableCell>
                   <TableCell align="center">
@@ -228,6 +347,7 @@ export default function PedidosList() {
                         <IconButton
                           size="small"
                           color="error"
+                          disabled={actualizarEstadosLoading}
                           onClick={() => {
                             setSelectedPedido(pedido);
                             setDeleteDialogOpen(true);
@@ -248,7 +368,7 @@ export default function PedidosList() {
           component="div"
           count={paginacion.total || 0}
           rowsPerPage={rowsPerPage}
-          page={page}
+          page={paginacion.totalPages ? Math.min(page, paginacion.totalPages - 1) : 0}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Filas por página"

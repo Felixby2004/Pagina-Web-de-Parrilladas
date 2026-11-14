@@ -17,16 +17,14 @@ export const useConfiguracion = () => {
       const result = await configuracionService.actualizar(formData);
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: ({ configuracion }) => {
+      queryClient.setQueryData(['configuracion'], configuracion);
       showSnackbar('Configuración actualizada exitosamente', 'success');
       queryClient.invalidateQueries({ queryKey: ['configuracion'] });
-      // Devolvemos los datos para que el componente pueda usarlos
-      return data;
     },
     onError: (error) => {
       const mensaje = error.response?.data?.error || 'Error al actualizar configuración';
       showSnackbar(mensaje, 'error');
-      throw new Error(mensaje); // Lanzamos para que el componente lo capture
     },
   });
 

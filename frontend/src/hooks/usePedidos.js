@@ -54,6 +54,21 @@ export const usePedidos = (params = {}) => {
     },
   });
 
+  const actualizarEstadosMutation = useMutation({
+    mutationFn: pedidoService.actualizarEstados,
+    onSuccess: async ({ actualizados }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pedidos'] }),
+        queryClient.invalidateQueries({ queryKey: ['pedido'] }),
+        queryClient.invalidateQueries({ queryKey: ['reporte-ingresos'] }),
+      ]);
+      showSnackbar(actualizados === 1 ? 'Estado actualizado' : `Estados actualizados en ${actualizados} pedidos`, 'success');
+    },
+    onError: (error) => {
+      showSnackbar(error.response?.data?.error || 'Error al guardar los estados', 'error');
+    },
+  });
+
   const eliminarMutation = useMutation({
     mutationFn: pedidoService.eliminar,
     onSuccess: () => {
@@ -77,6 +92,8 @@ export const usePedidos = (params = {}) => {
     actualizar: actualizarMutation.mutate,
     actualizarAsync: actualizarMutation.mutateAsync,
     actualizarLoading: actualizarMutation.isPending,
+    actualizarEstados: actualizarEstadosMutation.mutateAsync,
+    actualizarEstadosLoading: actualizarEstadosMutation.isPending,
     cerrar: cerrarMutation.mutate,
     cerrarLoading: cerrarMutation.isPending,
     eliminar: eliminarMutation.mutate,
