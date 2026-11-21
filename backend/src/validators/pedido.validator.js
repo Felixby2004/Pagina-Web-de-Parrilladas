@@ -26,6 +26,7 @@ export const notaSchema = z.object({
 }, { message: 'Datos inválidos para el tipo de nota' });
 
 export const pedidoSchema = z.object({
+  costoDelivery: z.number().finite().min(0).max(99999999.99).multipleOf(0.01).nullable().optional(),
   nombreCliente: z.string().max(150).optional().nullable(),
   fecha: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener el formato YYYY-MM-DD')
@@ -40,6 +41,13 @@ export const pedidoSchema = z.object({
   estado: estadoPedidoSchema.optional(),
   detalles: z.array(detallePedidoSchema).min(1, 'Debe agregar al menos un producto'),
   notas: z.array(notaSchema).optional().default([]),
+});
+
+export const extrasPedidoSchema = z.object({
+  extras: z.array(z.object({
+    productoId: z.number().int().positive(),
+    cantidad: z.number().int().positive().max(10000),
+  })).min(1, 'Agregue al menos un extra').max(100),
 });
 
 export const pedidoIdSchema = z.object({

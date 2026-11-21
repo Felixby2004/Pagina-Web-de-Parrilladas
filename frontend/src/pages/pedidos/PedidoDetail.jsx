@@ -23,7 +23,9 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useProductos } from '../../hooks/useProductos';
+import SelectorExtra from '../../components/pedidos/SelectorExtra';
 import { pedidoService } from '../../services/pedido.service';
 import { formatCurrency, formatDate } from '../../utils/formateador';
 
@@ -34,7 +36,7 @@ import {
   Download,
   ContentCopy,
 } from '@mui/icons-material';
-import { Edit, Delete } from '@mui/icons-material';
+import { Delete } from '@mui/icons-material';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -56,6 +58,22 @@ export default function PedidoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const notaRef = useRef();
+  const queryClient = useQueryClient();
+  const { productos } = useProductos({ limit: 1000 });
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const [extras, setExtras] = useState([]);
+  const [extrasError, setExtrasError] = useState('');
+  const extrasMutation = useMutation({
+    mutationFn: () => pedidoService.agregarExtras(id, extras.map(({ producto, cantidad }) => ({ productoId: producto.id, cantidad }))),
+    onSuccess: async () => {
+      setExtrasOpen(false);
+      setExtras([]);
+      setSnackbar({ open: true, severity: 'success', message: 'Extras agregados. El pedido queda abierto para cobrar.' });
+      await Promise.all(['pedido', 'pedidos', 'reporte-ingresos', 'reporte-diario'].map(key =>
+        queryClient.invalidateQueries({ queryKey: [key] })));
+    },
+    onError: err => setExtrasError(err.response?.data?.error || 'No se pudieron agregar los extras'),
+  });
 
   const [notaModalOpen, setNotaModalOpen] = useState(false);
   const [notaImagen, setNotaImagen] = useState(null);
@@ -272,12 +290,19 @@ export default function PedidoDetail() {
 
       <Divider sx={{ my: 3 }} />
 
+      {pedido.costoDelivery != null && (
+        <Typography sx={{ mb: 1 }}>Delivery: {formatCurrency(pedido.costoDelivery)}</Typography>
+      )}
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4">Total: {formatCurrency(pedido.total)}</Typography>
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap' }}>
         <Button variant="outlined" onClick={() => navigate('/pedidos')}>Volver</Button>
+        {pedido.estado !== 'CANCELADO' && (
+          <Button variant="contained" onClick={() => { setExtrasError(''); setExtrasOpen(true); }}>Agregar extras</Button>
+        )}
 
         {(pedido.estado === 'ABIERTO' || pedido.estado === 'PAGADO') && (
           <>
@@ -301,6 +326,29 @@ export default function PedidoDetail() {
           </>
         )}
       </Box>
+
+      <Dialog open={extrasOpen} onClose={() => { if (!extrasMutation.isPending) setExtrasOpen(false); }} maxWidth="md" fullWidth>
+        <DialogTitle>Agregar extras al pedido #{pedido.id}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">Los extras se suman al pedido sin cambiar los importes anteriores.</Typography>
+          {pedido.estado === 'PAGADO' && <Alert severity="info" sx={{ mt: 2 }}>Al guardar, este pedido volverá a quedar abierto para cobrar el nuevo total.</Alert>}
+          {extrasError && <Alert severity="error" sx={{ mt: 2 }}>{extrasError}</Alert>}
+          <SelectorExtra productos={productos} disabled={extrasMutation.isPending} onAdd={extra => setExtras(prev => [...prev, extra])} />
+          {extras.map(({ producto, cantidad }, index) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+              <Typography sx={{ flex: 1 }}>{cantidad} × {producto.nombre}: {formatCurrency(cantidad * Number(producto.precio))}</Typography>
+              <IconButton aria-label="Quitar extra" disabled={extrasMutation.isPending} onClick={() => setExtras(prev => prev.filter((_, i) => i !== index))}><Delete /></IconButton>
+            </Box>
+          ))}
+          <Typography variant="h6">Extras: {formatCurrency(extras.reduce((sum, e) => sum + e.cantidad * Number(e.producto.precio), 0))}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={extrasMutation.isPending} onClick={() => setExtrasOpen(false)}>Cancelar</Button>
+          <Button variant="contained" disabled={!extras.length || extrasMutation.isPending} onClick={() => extrasMutation.mutate()}>
+            {extrasMutation.isPending ? 'Guardando...' : 'Guardar extras'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ConfirmDialog
         open={deleteDialogOpen}

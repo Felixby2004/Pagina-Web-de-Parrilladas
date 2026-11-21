@@ -15,6 +15,7 @@ import {
   FormControl,
   InputLabel,
   Switch,
+  FormControlLabel,
   Table,
   TableBody,
   TableCell,
@@ -31,23 +32,28 @@ import { useProductos } from '../../hooks/useProductos';
 import { pedidoService } from '../../services/pedido.service';
 import { formatCurrency, getDateInTimeZoneISO } from '../../utils/formateador';
 import { z } from 'zod';
+import SelectorExtra from '../../components/pedidos/SelectorExtra';
+import { subtotalDetalle, TIPOS_PRODUCTO_LABEL, RECARGO_PAPA_FRITA } from '../../utils/preciosPedido';
 
 const detalleSchema = z.object({
   productoId: z.number().min(1, 'Seleccione un producto'),
-  cantidad: z.number().min(1, 'Cantidad mínima 1'),
+  cantidad: z.number().int('Use cantidades enteras').min(1, 'Cantidad mínima 1'),
   usaTaper: z.boolean().default(false),
   usaPapaFrita: z.boolean().default(false),
 });
 
-const notaSchema = z.object({
-  tipo: z.enum(['OBSERVACION', 'ADICIONAL']),
-  texto: z.string().optional(),
-  cantidad: z.number().optional(),
-  descripcion: z.string().optional(),
-  precio: z.number().optional(),
-});
+const notaSchema = z.discriminatedUnion('tipo', [
+  z.object({ tipo: z.literal('OBSERVACION'), texto: z.string().max(500).optional() }),
+  z.object({
+    tipo: z.literal('ADICIONAL'),
+    cantidad: z.number().int('Use cantidades enteras').positive('Ingrese una cantidad mayor a cero'),
+    descripcion: z.string().trim().min(1, 'Ingrese la descripción del extra').max(200),
+    precio: z.number().finite().positive('Ingrese un precio mayor a cero').multipleOf(0.01, 'Use como máximo dos decimales'),
+  }),
+]);
 
 const pedidoSchema = z.object({
+  costoDelivery: z.number().finite().min(0, 'El delivery no puede ser negativo').max(99999999.99).multipleOf(0.01, 'Use como máximo dos decimales').nullable(),
   nombreCliente: z.string().optional(),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleccione una fecha'),
   estado: z.enum(['ABIERTO', 'PAGADO', 'CANCELADO']).default('ABIERTO'),
@@ -66,7 +72,6 @@ export default function PedidoForm() {
 
   const {
     control,
-    register,
     handleSubmit,
     watch,
     setValue,
@@ -76,6 +81,7 @@ export default function PedidoForm() {
     resolver: zodResolver(pedidoSchema),
     defaultValues: {
       nombreCliente: '',
+      costoDelivery: null,
       fecha: getDateInTimeZoneISO(),
       estado: 'ABIERTO',
       detalles: [{ productoId: '', cantidad: 1, usaTaper: false, usaPapaFrita: false }],
@@ -96,6 +102,7 @@ export default function PedidoForm() {
   const detallesWatch = watch('detalles');
   const notasWatch = watch('notas');
   const estadoWatch = watch('estado');
+  const costoDelivery = watch('costoDelivery');
 
   const { data: pedidoEdit, isLoading: pedidoLoading } = useQuery({
     queryKey: ['pedido', id],
@@ -110,6 +117,7 @@ export default function PedidoForm() {
 
     reset({
       nombreCliente: pedidoEdit.nombreCliente || '',
+      costoDelivery: pedidoEdit.costoDelivery == null ? null : Number(pedidoEdit.costoDelivery),
       fecha: getDateInTimeZoneISO(pedidoEdit.fecha),
       estado: pedidoEdit.estado || 'ABIERTO',
       detalles: (pedidoEdit.detalles || []).map((d) => ({
@@ -138,17 +146,7 @@ export default function PedidoForm() {
       if (!detalle?.productoId) return;
       const producto = productos.find((p) => p.id === detalle.productoId);
       if (!producto) return;
-      const cantidad = Number(detalle.cantidad || 0);
-      const precioProducto = Number(producto.precio);
-      let subtotal = cantidad * precioProducto;
-
-      if (detalle.usaTaper && taperYPapa?.taper) {
-        subtotal += cantidad * Number(taperYPapa.taper.precio);
-      }
-      if (detalle.usaPapaFrita && taperYPapa?.papaFrita) {
-        subtotal += cantidad * Number(taperYPapa.papaFrita.precio);
-      }
-      totalDetalles += subtotal;
+      totalDetalles += subtotalDetalle(detalle, producto, taperYPapa?.taper);
     });
 
     let totalNotas = 0;
@@ -158,7 +156,7 @@ export default function PedidoForm() {
       }
     });
 
-    return totalDetalles + totalNotas;
+    return Math.round((totalDetalles + totalNotas + Number(costoDelivery || 0)) * 100) / 100;
   };
 
   const total = calcularTotal();
@@ -172,6 +170,7 @@ export default function PedidoForm() {
 
       const pedidoData = {
         nombreCliente: data.nombreCliente || null,
+        costoDelivery: data.costoDelivery,
         fecha: data.fecha,
         estado: data.estado || 'ABIERTO',
         detalles: data.detalles.map(d => ({
@@ -280,6 +279,20 @@ export default function PedidoForm() {
             </Grid>
           </Paper>
 
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6">Delivery</Typography>
+            <FormControlLabel label="Incluir delivery" control={
+              <Switch checked={costoDelivery !== null} disabled={isLocked}
+                onChange={e => setValue('costoDelivery', e.target.checked ? 0 : null, { shouldValidate: true })} />
+            } />
+            {costoDelivery !== null && (
+              <TextField label="Precio del delivery (S/)" type="number" value={Number.isNaN(costoDelivery) ? '' : costoDelivery}
+                onChange={e => setValue('costoDelivery', e.target.value === '' ? NaN : Number(e.target.value), { shouldValidate: true })}
+                disabled={isLocked} error={!!errors.costoDelivery} helperText={errors.costoDelivery?.message}
+                slotProps={{ htmlInput: { min: 0, max: 99999999.99, step: 0.01 } }} />
+            )}
+          </Paper>
+
           <Typography variant="h6" gutterBottom>
             Detalle del Pedido
           </Typography>
@@ -292,7 +305,7 @@ export default function PedidoForm() {
                     <TableCell>Producto</TableCell>
                     <TableCell align="center">Cantidad</TableCell>
                     <TableCell align="center">Taper</TableCell>
-                    <TableCell align="center">Papa Frita</TableCell>
+                    <TableCell align="center">Papa frita (+{formatCurrency(RECARGO_PAPA_FRITA)})</TableCell>
                     <TableCell align="right">Precio Unit.</TableCell>
                     <TableCell align="right">Subtotal</TableCell>
                     <TableCell align="center"></TableCell>
@@ -301,18 +314,7 @@ export default function PedidoForm() {
                 <TableBody>
                   {detalles.map((field, index) => {
                     const producto = productos.find(p => p.id === detallesWatch?.[index]?.productoId);
-                    const cantidad = Number(detallesWatch?.[index]?.cantidad || 0);
-                    let subtotal = 0;
-                    if (producto) {
-                      const precioProducto = Number(producto.precio);
-                      subtotal = cantidad * precioProducto;
-                      if (detallesWatch?.[index]?.usaTaper && taperYPapa?.taper) {
-                        subtotal += cantidad * Number(taperYPapa.taper.precio);
-                      }
-                      if (detallesWatch?.[index]?.usaPapaFrita && taperYPapa?.papaFrita) {
-                        subtotal += cantidad * Number(taperYPapa.papaFrita.precio);
-                      }
-                    }
+                    const subtotal = subtotalDetalle(detallesWatch?.[index] || {}, producto, taperYPapa?.taper);
 
                     return (
                       <TableRow key={field.id}>
@@ -322,12 +324,16 @@ export default function PedidoForm() {
                             <Select
                               label="Producto"
                               value={detallesWatch?.[index]?.productoId || ''}
-                              onChange={(e) => setValue(`detalles.${index}.productoId`, Number(e.target.value))}
+                              onChange={(e) => {
+                                setValue(`detalles.${index}.productoId`, Number(e.target.value));
+                                setValue(`detalles.${index}.usaTaper`, false);
+                                setValue(`detalles.${index}.usaPapaFrita`, false);
+                              }}
                               error={!!errors.detalles?.[index]?.productoId}
                               disabled={isLocked}
                             >
-                              {productos.filter(p => p.tipo === 'PLATO').map((p) => (
-                                <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>
+                              {productos.filter(p => p.disponible || p.id === detallesWatch?.[index]?.productoId).map((p) => (
+                                <MenuItem key={p.id} value={p.id}>{p.nombre} — {TIPOS_PRODUCTO_LABEL[p.tipo]}</MenuItem>
                               ))}
                             </Select>
                           </FormControl>
@@ -349,7 +355,7 @@ export default function PedidoForm() {
                             checked={detallesWatch?.[index]?.usaTaper || false}
                             onChange={(e) => setValue(`detalles.${index}.usaTaper`, e.target.checked)}
                             size="small"
-                            disabled={isLocked}
+                            disabled={isLocked || producto?.tipo !== 'PLATO' || !taperYPapa?.taper}
                           />
                         </TableCell>
                         <TableCell align="center">
@@ -357,7 +363,7 @@ export default function PedidoForm() {
                             checked={detallesWatch?.[index]?.usaPapaFrita || false}
                             onChange={(e) => setValue(`detalles.${index}.usaPapaFrita`, e.target.checked)}
                             size="small"
-                            disabled={isLocked}
+                            disabled={isLocked || producto?.tipo !== 'PLATO'}
                           />
                         </TableCell>
                         <TableCell align="right">
@@ -398,10 +404,13 @@ export default function PedidoForm() {
           </Paper>
 
           <Typography variant="h6" gutterBottom>
-            Notas
+            Extras y observaciones
           </Typography>
 
           <Paper sx={{ p: 3, mb: 2 }}>
+            <Typography variant="body2">Agregue porciones de papa frita, taper, chorizo u otros productos adicionales.</Typography>
+            <SelectorExtra productos={productos} disabled={isLocked} onAdd={({ producto, cantidad }) =>
+              appendNota({ tipo: 'ADICIONAL', descripcion: producto.nombre, precio: Number(producto.precio), cantidad })} />
             {notas.map((field, index) => (
               <Box key={field.id} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
                 <Grid container spacing={2}>
@@ -411,7 +420,8 @@ export default function PedidoForm() {
                       <Select
                         label="Tipo"
                         value={notasWatch?.[index]?.tipo || 'OBSERVACION'}
-                        onChange={(e) => setValue(`notas.${index}.tipo`, e.target.value)}
+                        disabled={isLocked}
+                        onChange={(e) => setValue(`notas.${index}`, e.target.value === 'OBSERVACION' ? { tipo: 'OBSERVACION', texto: '' } : { tipo: 'ADICIONAL', cantidad: 1, descripcion: '', precio: 0 })}
                       >
                         <MenuItem value="OBSERVACION">Observación</MenuItem>
                         <MenuItem value="ADICIONAL">Producto adicional</MenuItem>
@@ -422,6 +432,9 @@ export default function PedidoForm() {
                     <Grid item xs={12} md={9}>
                       <TextField
                         label="Observación"
+                        disabled={isLocked}
+                        error={!!errors.notas?.[index]?.texto}
+                        helperText={errors.notas?.[index]?.texto?.message}
                         fullWidth
                         size="small"
                         value={notasWatch?.[index]?.texto || ''}
@@ -433,6 +446,9 @@ export default function PedidoForm() {
                       <Grid item xs={12} md={3}>
                         <TextField
                           label="Cantidad"
+                          disabled={isLocked}
+                          error={!!errors.notas?.[index]?.cantidad}
+                          helperText={errors.notas?.[index]?.cantidad?.message}
                           type="number"
                           size="small"
                           fullWidth
@@ -444,6 +460,9 @@ export default function PedidoForm() {
                       <Grid item xs={12} md={4}>
                         <TextField
                           label="Descripción"
+                          disabled={isLocked}
+                          error={!!errors.notas?.[index]?.descripcion}
+                          helperText={errors.notas?.[index]?.descripcion?.message}
                           size="small"
                           fullWidth
                           value={notasWatch?.[index]?.descripcion || ''}
@@ -453,6 +472,9 @@ export default function PedidoForm() {
                       <Grid item xs={12} md={2}>
                         <TextField
                           label="Precio"
+                          disabled={isLocked}
+                          error={!!errors.notas?.[index]?.precio}
+                          helperText={errors.notas?.[index]?.precio?.message}
                           type="number"
                           size="small"
                           fullWidth

@@ -6,6 +6,7 @@ import {
   pedidoIdSchema,
   pedidoQuerySchema,
   estadosPedidosSchema,
+  extrasPedidoSchema,
 } from '../validators/pedido.validator.js';
 import {
   crearPedido,
@@ -15,6 +16,7 @@ import {
   actualizarEstadosPedidos,
   cerrarPedido,
   eliminarPedido,
+  agregarExtras,
 } from '../controllers/pedido.controller.js';
 
 const router = Router();
@@ -26,7 +28,8 @@ router.get('/', validate(pedidoQuerySchema, 'query'), listarPedidos);
 router.get('/:id', validate(pedidoIdSchema, 'params'), obtenerPedido);
 router.post('/', validate(pedidoSchema), crearPedido);
 router.patch('/estados', validate(estadosPedidosSchema), actualizarEstadosPedidos);
-router.put('/:id', validate(pedidoIdSchema, 'params'), actualizarPedido);
+router.put('/:id', validate(pedidoIdSchema, 'params'), validate(pedidoSchema), actualizarPedido);
+router.post('/:id/extras', validate(pedidoIdSchema, 'params'), validate(extrasPedidoSchema), agregarExtras);
 router.post('/:id/cerrar', validate(pedidoIdSchema, 'params'), cerrarPedido);
 router.delete('/:id', validate(pedidoIdSchema, 'params'), eliminarPedido);
 

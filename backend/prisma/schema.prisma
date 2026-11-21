@@ -17,6 +17,8 @@ enum Rol {
 
 enum TipoProducto {
   PLATO
+  BEBIDA
+  EXTRA
   TAPER
   PAPA_FRITA
 }
@@ -78,6 +80,7 @@ model Pedido {
   fecha         DateTime
   estado        EstadoPedido @default(ABIERTO)
   total         Decimal      @db.Decimal(10,2)
+  costoDelivery Decimal?     @db.Decimal(10,2)
   visible       Boolean      @default(true)  // Eliminación lógica
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt

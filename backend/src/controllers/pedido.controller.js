@@ -6,7 +6,17 @@ import {
   actualizarEstadosPedidosService,
   cerrarPedidoService,
   eliminarPedidoService,
+  agregarExtrasService,
 } from '../services/pedido.service.js';
+
+export const agregarExtras = async (req, res, next) => {
+  try {
+    const pedido = await agregarExtrasService(Number(req.params.id), req.body.extras);
+    res.json({ mensaje: 'Extras agregados al pedido', pedido });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const crearPedido = async (req, res, next) => {
   try {

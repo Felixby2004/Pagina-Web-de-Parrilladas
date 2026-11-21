@@ -5,6 +5,8 @@
 // Tipos de producto
 export const TIPOS_PRODUCTO = {
   PLATO: 'PLATO',
+  BEBIDA: 'BEBIDA',
+  EXTRA: 'EXTRA',
   TAPER: 'TAPER',
   PAPA_FRITA: 'PAPA_FRITA',
 } as const;
@@ -39,6 +41,8 @@ export const METODOS_PAGO = {
 // Opciones para dropdowns
 export const OPCIONES_TIPOS_PRODUCTO = [
   { value: 'PLATO', label: 'Plato' },
+  { value: 'BEBIDA', label: 'Bebida' },
+  { value: 'EXTRA', label: 'Extra' },
   { value: 'TAPER', label: 'Taper' },
   { value: 'PAPA_FRITA', label: 'Papa Frita' },
 ];

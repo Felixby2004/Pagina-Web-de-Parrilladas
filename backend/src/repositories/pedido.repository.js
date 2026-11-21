@@ -177,9 +177,7 @@ export const obtenerIngresosPorCliente = async (fechaInicio, fechaFin) => {
     }
     const data = clientesMap.get(cliente);
     data.cantidadPedidos += 1;
-    const totalDetalles = pedido.detalles.reduce((sum, d) => sum + Number(d.subtotal), 0);
-    const totalNotas = pedido.notas.reduce((sum, n) => sum + Number(n.subtotal || 0), 0);
-    data.ingresoTotal += totalDetalles + totalNotas;
+    data.ingresoTotal += Number(pedido.total);
     data.pedidos.push(pedido.fecha);
   });
 

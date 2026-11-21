@@ -1,5 +1,7 @@
 export const TIPOS_PRODUCTO = {
   PLATO: 'PLATO',
+  BEBIDA: 'BEBIDA',
+  EXTRA: 'EXTRA',
   TAPER: 'TAPER',
   PAPA_FRITA: 'PAPA_FRITA',
 };

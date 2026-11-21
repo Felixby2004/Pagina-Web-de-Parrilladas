@@ -124,7 +124,9 @@ export default function ProductoForm() {
                 onChange={(e) => setValue('tipo', e.target.value)}
                 error={!!errors.tipo}
               >
-                <MenuItem value="PLATO">PLATO</MenuItem>
+                <MenuItem value="PLATO">Plato</MenuItem>
+                <MenuItem value="BEBIDA">Bebida</MenuItem>
+                <MenuItem value="EXTRA">Extra</MenuItem>
                 <MenuItem value="TAPER">TAPER</MenuItem>
                 <MenuItem value="PAPA_FRITA">PAPA FRITA</MenuItem>
               </Select>

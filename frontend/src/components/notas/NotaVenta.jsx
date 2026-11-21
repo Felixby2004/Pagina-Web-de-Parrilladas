@@ -115,6 +115,9 @@ export const NotaVenta = forwardRef(({ pedido, configuracion }, ref) => {
       {/* Totales */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Box sx={{ textAlign: 'right' }}>
+          {pedido.costoDelivery != null && (
+            <Typography variant="body2">Delivery: {formatCurrency(pedido.costoDelivery)}</Typography>
+          )}
           <Typography variant="h6">
             Total: {formatCurrency(pedido.total)}
           </Typography>

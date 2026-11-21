@@ -38,7 +38,7 @@ import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Loading } from '../../components/common/Loading';
 import { configuracionService } from '../../services/configuracion.service.js';
 
-const tipos = ['PLATO', 'TAPER', 'PAPA_FRITA'];
+const tipos = ['PLATO', 'BEBIDA', 'EXTRA', 'TAPER', 'PAPA_FRITA'];
 
 export default function ProductosList() {
   const navigate = useNavigate();
@@ -119,6 +119,8 @@ export default function ProductosList() {
   const getTipoColor = (tipo) => {
     const colors = {
       PLATO: 'primary',
+      BEBIDA: 'info',
+      EXTRA: 'success',
       TAPER: 'secondary',
       PAPA_FRITA: 'warning',
     };

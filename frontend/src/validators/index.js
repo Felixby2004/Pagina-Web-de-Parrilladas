@@ -44,6 +44,6 @@ export const productoSchema = z.object({
     }
     return value;
   }, z.number().positive('El precio debe ser mayor a 0')),
-  tipo: z.enum(['PLATO', 'TAPER', 'PAPA_FRITA']),
+  tipo: z.enum(['PLATO', 'BEBIDA', 'EXTRA', 'TAPER', 'PAPA_FRITA']),
   disponible: z.boolean().default(true),
 });
