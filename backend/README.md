@@ -1,6 +1,11 @@
 # Actualización de pedidos y catálogo
 
-Desde `backend`, aplicar los cambios de estructura antes de iniciar la nueva versión:
+Para actualizar directamente desde el editor SQL de PostgreSQL/Neon:
+
+1. Ejecutar completo `prisma/sql/preparar-productos-delivery.sql`. Agrega BEBIDA, EXTRA y el campo opcional costoDelivery; también limpia la transacción fallida si se intentó actualizar el catálogo antes de preparar la estructura.
+2. Cuando termine, ejecutar completo `prisma/sql/actualizar-productos.sql` en otra ejecución. Los valores nuevos del enum deben confirmarse antes de usarlos.
+
+Como alternativa al primer paso, desde `backend` se pueden aplicar las migraciones. La migración admite que los campos y valores ya se hayan agregado con el script de preparación:
 
 ```powershell
 npx prisma migrate deploy

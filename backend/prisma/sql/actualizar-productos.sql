@@ -1,9 +1,21 @@
 -- Catálogo adaptado a los 15 productos de productos.csv.
--- Ejecutar DESPUÉS de `npx prisma migrate deploy`.
+-- PASO 2: ejecutar después de preparar-productos-delivery.sql (en otra ejecución)
+-- o después de aplicar la migración con `npx prisma migrate deploy`.
 -- Conserva IDs, nombres, descripciones, precios, disponibilidad y visibilidad.
 -- No crea ni elimina productos y no modifica pedidos anteriores.
 -- Puede ejecutarse varias veces: solo actualiza los tipos que cambien.
 BEGIN;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumtypid = '"TipoProducto"'::regtype AND enumlabel = 'BEBIDA'
+  ) THEN
+    RAISE EXCEPTION 'Falta BEBIDA en TipoProducto. Ejecuta primero preparar-productos-delivery.sql completo y después vuelve a ejecutar este archivo por separado.';
+  END IF;
+END;
+$$;
 
 CREATE TEMP TABLE catalogo_productos_csv (
   id INTEGER PRIMARY KEY,
